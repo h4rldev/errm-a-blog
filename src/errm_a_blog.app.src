@@ -1,0 +1,20 @@
+{application, errm_a_blog, [
+    {description, "A blog based on the errm stack of libraries."},
+    {vsn, "0.1.0"},
+    {registered, []},
+    {mod, {errm_a_blog, []}},
+    {applications, [
+        kernel,
+        stdlib,
+        errm_http,
+        errm_json,
+        errm_jwt,
+        errm_uuid,
+        errm_sqlite,
+        errm_env
+    ]},
+    {env, []},
+    {modules, []},
+    {licenses, ["BSD-3"]},
+    {links, [{"Codeberg", "https://codeberg.org/h4rl/errm-A-blog"}]}
+ ]}.
