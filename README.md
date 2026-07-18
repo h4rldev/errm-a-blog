@@ -19,8 +19,8 @@ Not even close to a working prototype.
 
 ## TODOs
 
-- [ ] - Properly implement `/api/auth/register`
-- [ ] - Implement the rest of auth,
+- [x] - Properly implement `/api/auth/register`
+- [x] - Implement the rest of auth,
 - [ ] - Implement blog post endpoints
 - [ ] - Write more TODOs.
 
