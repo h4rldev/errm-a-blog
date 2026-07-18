@@ -90,15 +90,12 @@ get(Key) ->
     _ -> undefined
   end.
 
-%% Main conversion – eqWAlizer now sees both branches return string()
 -spec json_to_string(errm_json:json_term()) -> string().
 json_to_string(V) when is_binary(V) ->
     binary_to_list(V);
 json_to_string(V) when is_list(V) ->
     ensure_string(V).   %% returns string()
 
-%% Helper that accepts any list and returns a string (list of integers)
-%% Throws if the list contains non‑integer elements.
 -spec ensure_string(list()) -> string().
 ensure_string([]) -> [];
 ensure_string([H|T]) when is_integer(H) ->
