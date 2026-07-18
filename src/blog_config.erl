@@ -25,13 +25,26 @@ load() ->
     {ok, Data} ->
       case errm_json:decode(Data) of
         {ok, Decoded} when is_map(Decoded) ->
-           #{
-            ip_address => maps:get(<<"ip_address">>, Decoded, Defaults#config.ip_address),
-            port => maps:get(<<"port">>, Decoded, Defaults#config.port),
-            log_access => maps:get(<<"log_access">>, Decoded, Defaults#config.log_access),
-            internal_log_level => maps:get(<<"internal_log_level">>, Decoded, Defaults#config.internal_log_level),
-            db_path => maps:get(<<"db_path">>, Decoded, Defaults#config.db_path),
-            server_name => maps:get(<<"server_name">>, Decoded, Defaults#config.server_name)
+          Ip = maps:get(<<"ip_address">>, Decoded, Defaults#config.ip_address),
+          Port = maps:get(<<"port">>, Decoded, Defaults#config.port),
+          PortInt = case Port of
+            _Port when is_integer(_Port) -> _Port
+          end,
+          LogAccess = maps:get(<<"log_access">>, Decoded, Defaults#config.log_access),
+          LogAccessBool = case LogAccess of
+            LA when is_boolean(LA) -> LA
+          end,
+          InternalLogLevel = maps:get(<<"internal_log_level">>, Decoded, Defaults#config.internal_log_level),
+          DbPath = maps:get(<<"db_path">>, Decoded, Defaults#config.db_path),
+          ServerName = maps:get(<<"server_name">>, Decoded, Defaults#config.server_name),
+
+           #config{
+            ip_address=json_to_string(Ip),
+            port=PortInt,
+            log_access=LogAccessBool,
+            internal_log_level=json_to_string(InternalLogLevel),
+            db_path=json_to_string(DbPath),
+            server_name=json_to_string(ServerName)
           };
         {error, not_found} ->
           logger:warning("Failed to decode config file: ~p, using defaults"),
@@ -62,7 +75,9 @@ record_to_map(#config{} = Record) ->
 get(Key) ->
   Config = case errm_http:get_secret(config) of
     {ok, Secret} when is_record(Secret, config) -> Secret;
-    _ -> throw({error, config_not_found})
+    WhatHappened ->
+      io:format("What happened: ~p~n", [WhatHappened]),
+      throw({error, config_not_found})
   end,
 
   case Key of
@@ -74,3 +89,18 @@ get(Key) ->
     server_name -> Config#config.server_name;
     _ -> undefined
   end.
+
+%% Main conversion – eqWAlizer now sees both branches return string()
+-spec json_to_string(errm_json:json_term()) -> string().
+json_to_string(V) when is_binary(V) ->
+    binary_to_list(V);
+json_to_string(V) when is_list(V) ->
+    ensure_string(V).   %% returns string()
+
+%% Helper that accepts any list and returns a string (list of integers)
+%% Throws if the list contains non‑integer elements.
+-spec ensure_string(list()) -> string().
+ensure_string([]) -> [];
+ensure_string([H|T]) when is_integer(H) ->
+    [H | ensure_string(T)];
+ensure_string(_) -> error({not_a_string}).

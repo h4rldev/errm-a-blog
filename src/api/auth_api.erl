@@ -13,9 +13,9 @@ register(Req) ->
         _ ->
           try errm_json:decode(Body) of
             {ok, Data} when is_map(Data) ->
-              Username = get_from_json(<<"username">>, Data),
-              case Username of
-                undefined -> response_utils:error(400, "No username provided")
+              Username = case get_from_json(<<"username">>, Data) of
+                undefined -> response_utils:error(400, "No username provided");
+                Username1 when is_binary(Username1) -> Username1
               end,
 
               Password = case get_from_json(<<"password">>, Data) of
@@ -54,10 +54,13 @@ register(Req) ->
                   logger:error("Error creating account: ~p", [Reason]),
                   response_utils:error(500, "Error creating account")
               end;
-            {error, _} ->
+            {error, Reason1} ->
+              logger:error("Error creating reading json: ~p", [Reason1]),
               response_utils:error(400, "Invalid JSON")
           catch
-            _:_ -> response_utils:error(400, "Invalid JSON")
+            _:Reason2 -> 
+              logger:error("Error creating account: ~p", [Reason2]),
+              response_utils:error(400, "Invalid JSON")
           end
       end;
     _ -> response_utils:error(400, "Invalid content type")

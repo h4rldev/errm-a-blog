@@ -139,6 +139,7 @@
       packages = with pkgs; [
         erlang-language-platform
         just
+        p7zip
       ];
 
       shellHook = ''
