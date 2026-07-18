@@ -4,7 +4,7 @@
 init() ->
   JWT = get_or_gen("JWT_SECRET"),
   Cookie = get_or_gen("COOKIE_SECRET"),
-  Token = get_or_gen("REGISTER_TOKEN"),
+  Token = get_valid_register_token(),
 
   errm_http:set_secret(jwt_secret, JWT),
   errm_http:set_secret(cookie_key, Cookie),
@@ -23,13 +23,30 @@ get_jwt_secret() ->
 get_register_token() ->
   errm_http:get_secret(register_token).
 
+get_valid_register_token() ->
+  case errm_env:get("REGISTER_TOKEN", "errm.env") of
+    {ok, Token} ->
+      case errm_env:get("REGISTER_TOKEN_EXPIRY", "errm.env") of
+        {ok, ExpiryStr} ->
+          Expiry = list_to_integer(ExpiryStr),
+          Now = erlang:system_time(second),
+          if Now > Expiry -> generate_register_token();
+            true -> Token
+          end;
+        _ -> generate_register_token()
+      end;
+    _ -> generate_register_token()
+  end.
+
 -spec get_or_gen(nonempty_string()) -> binary().
 get_or_gen(Key) ->
   case os:getenv(Key) of
     false ->
       case errm_env:get(Key, "errm.env") of
         {ok, Value} -> debase64(Value);
-        {error, not_found} -> gen(Key)
+        {error, not_found} -> 
+          logger:error("No value found for key: ~p, generating", [Key]),
+          gen(Key)
       end;
     Value -> debase64(Value)
   end.
@@ -42,10 +59,8 @@ gen(Key) ->
   case Key of
     "JWT_SECRET"     -> gen_jwt_secret();
     "COOKIE_SECRET"  -> gen_cookie_secret();
-    "REGISTER_TOKEN" -> gen_register_token();
     _ -> {error, unknown_key}
   end.
-
 
 gen_jwt_secret() ->
   JWTSECRET = crypto:strong_rand_bytes(32),
@@ -62,20 +77,34 @@ gen_cookie_secret() ->
   file:write_file("errm.env", KEY, [append]),
   COOKIESECRET.
 
-gen_register_token() ->
-  JwtSecret = get_jwt_secret(),
-  Jwt = case JwtSecret of
-    {ok, Bin} when is_binary(Bin) -> Bin;
-    _ -> gen_jwt_secret()
-  end,
 
-  Token = case errm_jwt:sign(#{<<"sub">> => <<"register">>}, Jwt, hs256) of
-    {ok, Tok} -> Tok;
-    {error, Reason} -> error(Reason)
-  end,
-
-  Base64 = base64:encode(Token, #{mode => urlsafe, padding => false}),
-  KEY = io_lib:format("REGISTER_TOKEN=~s\n", [Base64]),
-  file:write_file("errm.env", KEY, [append]),
+generate_register_token() ->
+  Token = base64:encode(crypto:strong_rand_bytes(24), #{mode => 'urlsafe', padding => false}),
+  Expiry = erlang:system_time(second) + 86400,  % 24 hours
+  set_env_var("REGISTER_TOKEN", Token),
+  set_env_var("REGISTER_TOKEN_EXPIRY", integer_to_list(Expiry)),
   Token.
+
+
+set_env_var(Key, Value) ->
+  KeyBin = list_to_binary(Key),
+  ValBin = case Value of
+             Bin when is_binary(Bin) -> Bin;
+             Str -> list_to_binary(Str)
+           end,
+  NewLine = <<KeyBin/binary, "=", ValBin/binary, "\n">>,
+  case file:read_file("errm.env") of
+    {ok, Content} ->
+      Lines = binary:split(Content, <<"\n">>, [global]),
+      Filtered = [L || L <- Lines,
+        L =/= <<>>,
+        case binary:match(L, <<KeyBin/binary, "=">>) of
+          {0, _} -> false;
+          _      -> true
+      end],
+      NewContent = binary:join(Filtered ++ [NewLine], <<"\n">>),
+      file:write_file("errm.env", NewContent);
+    {error, enoent} ->
+      file:write_file("errm.env", NewLine)
+  end.
 

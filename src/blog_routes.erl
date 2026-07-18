@@ -11,6 +11,6 @@ get() ->
     %{put, ["api", "posts", ":id"], fun posts_api:update_post/1},
     %{delete, ["api", "posts", ":id"], fun posts_api:delete_post/1},
 
-    {post, ["api", "auth", "register"], fun auth_api:register/1}
-    %{post, ["api", "auth", "login"], fun auth_api:login/1}
+    {post, ["api", "auth", "register"], fun auth_api:register/1},
+    {post, ["api", "auth", "login"], fun auth_api:login/1}
   ].
