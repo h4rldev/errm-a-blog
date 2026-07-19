@@ -17,7 +17,7 @@ get_post(Req) ->
         Slug -> fetch_post_by_slug(Slug)
       end;
     IdBin when is_binary(IdBin) ->
-      case string:to_integer(IdBin) of
+      case string:to_integer(binary_to_list(IdBin)) of
         {IntId, []} when is_integer(IntId) -> fetch_post_by_id(IntId);
         _ ->
           response_utils:error(400, "Invalid id")
@@ -50,7 +50,7 @@ update_post(Req) ->
             Slug -> handle_update(Req, UserId, {slug, Slug})
           end;
         IdBin when is_binary(IdBin) ->
-          case string:to_integer(IdBin) of
+          case string:to_integer(binary_to_list(IdBin)) of
             {IntId, []} when is_integer(IntId) -> handle_update(Req, UserId, {id, IntId});
             _ ->
               response_utils:error(400, "Invalid id")
@@ -94,7 +94,7 @@ fetch_posts(Db, Amount) ->
     {ok, []} ->
       response_utils:ok(#{message => "No posts available"});
     {ok, Rows} ->
-      Posts = lists:map(fun(Row) -> Row end, Rows),
+      Posts = [format_post(Row) || Row <- Rows],
       Response = #{
         <<"amount">> => length(Posts),
         <<"posts">> => Posts
@@ -116,7 +116,7 @@ fetch_post_by_id(Id) ->
         {ok, []} ->
           response_utils:error(404, "Post not found");
         {ok, [Row]} ->
-          response_utils:ok(Row);
+          response_utils:ok(format_post(Row));
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -133,7 +133,7 @@ fetch_post_by_slug(Slug) ->
         {ok, []} ->
           response_utils:error(404, "Post not found");
         {ok, [Row]} ->
-          response_utils:ok(Row);
+          response_utils:ok(format_post(Row));
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -149,17 +149,18 @@ validate_post_request(Req) ->
         Body ->
           case errm_json:decode(Body) of
             {ok, Data} when is_map(Data) ->
-              Title = maps:get("title", Data, undefined),
-              Slug = maps:get("slug", Data, undefined),
-              Summary = maps:get("summary", Data, undefined),
-              ContentMarkdown = maps:get("content_markdown", Data, undefined),
-              Tags = maps:get("tags", Data, []),
+              logger:debug("Data: ~p", [Data]),
+              Title = maps:get(<<"title">>, Data, undefined),
+              Slug = maps:get(<<"slug">>, Data, undefined),
+              Summary = maps:get(<<"summary">>, Data, undefined),
+              ContentMarkdown = maps:get(<<"content_markdown">>, Data, undefined),
+              Tags = maps:get(<<"tags">>, Data, []),
 
               case {Title, Slug, ContentMarkdown} of
                 {undefined, _, _} -> {error, 400, "No title provided"};
                 {_, undefined, _} -> {error, 400, "No slug provided"};
                 {_, _, undefined} -> {error, 400, "No content provided"};
-                {T, S, C} when is_list(T), is_list(S), is_list(C) ->
+                {T, S, C} when is_binary(T), is_binary(S), is_binary(C) ->
                   case validate_tags(Tags) of
                     {ok, TagsJson} ->
                       {ok, T, S, Summary, C, TagsJson};
@@ -183,7 +184,7 @@ validate_tags(Tags) ->
       case lists:all(fun(Tag) -> is_binary(Tag) end, Tags) of
         true ->
           Json = errm_json:encode(Tags),
-          {ok, Json};
+          {ok, iolist_to_binary(Json)};
         false ->
           {error, "Invalid tags, tags must be an array of strings"}
       end;
@@ -197,16 +198,10 @@ insert_post(UserId, Title, Slug, Summary, ContentMarkdown, Tags) ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
-      TagsJson = case Tags of
-        [] -> <<"[]">>;
-        List when is_list(List) ->
-          errm_json:encode(List);
-        _ ->
-          Tags
-      end,
       Now = erlang:system_time(second),
+      logger:debug("Tags: ~p", [Tags]),
       Sql = "INSERT INTO posts (slug, title, summary, content_markdown, author_id, tags, posted_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      case errm_sqlite:query(Db, Sql, [Slug, Title, Summary, ContentMarkdown, UserId, TagsJson, Now]) of
+      case errm_sqlite:query(Db, Sql, [Slug, Title, Summary, ContentMarkdown, UserId, Tags, Now]) of
         {ok, _} ->
           {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
           response_utils:ok(#{message => <<"Post created successfully">>, id => LastId});
@@ -237,16 +232,16 @@ validate_update_body(Req) ->
         Body ->
           case errm_json:decode(Body) of
             {ok, Data} when is_map(Data) ->
-              Title = maps:get("title", Data, undefined),
-              Slug = maps:get("slug", Data, undefined),
-              Summary = maps:get("summary", Data, undefined),
-              ContentMarkdown = maps:get("content_markdown", Data, undefined),
-              Tags = maps:get("tags", Data, []),
+              Title = maps:get(<<"title">>, Data, undefined),
+              Slug = maps:get(<<"slug">>, Data, undefined),
+              Summary = maps:get(<<"summary">>, Data, undefined),
+              ContentMarkdown = maps:get(<<"content_markdown">>, Data, undefined),
+              Tags = maps:get(<<"tags">>, Data, []),
               case {Title, Slug, ContentMarkdown} of
                 {undefined, _, _} -> {error, 400, "No title provided"};
                 {_, undefined, _} -> {error, 400, "No slug provided"};
                 {_, _, undefined} -> {error, 400, "No content provided"};
-                {T, S, C} when is_list(T), is_list(S), is_list(C) ->
+                {T, S, C} when is_binary(T), is_binary(S), is_binary(C) ->
                   case validate_tags(Tags) of
                     {ok, TagsJson} ->
                       {ok, T, S, Summary, C, TagsJson};
@@ -332,3 +327,38 @@ sql_delete_post(UserId, Identifier) ->
           response_utils:error(500, "Couldn't delete post due to database error")
       end
   end.
+
+-spec format_post(map()) -> map().
+format_post(Row) ->
+  maps:fold(fun(Key, Value, Acc) ->
+    BinKey = key_to_binary(Key),
+    BinValue = value_to_binary(Value),
+    FinalValue = case BinKey of
+      <<"tags">> when is_binary(BinValue) ->
+        try errm_json:decode(BinValue) of
+          {ok, Decoded} -> Decoded;
+          _ -> BinValue
+        catch _:_ -> BinValue
+          end;
+      _ -> BinValue
+    end,
+    Acc#{BinKey => FinalValue}
+  end, #{}, Row).
+
+key_to_binary(Key) when is_atom(Key) -> atom_to_binary(Key, utf8);
+key_to_binary(Key) when is_list(Key) -> list_to_binary(Key);
+key_to_binary(Key) when is_binary(Key) -> Key;
+key_to_binary(Key) -> iolist_to_binary(Key).
+
+value_to_binary(null) -> null;
+value_to_binary(undefined) -> null;
+value_to_binary(V) when is_list(V) ->
+    case is_string(V) of
+        true -> iolist_to_binary(V);
+        false -> V
+    end;
+value_to_binary(V) -> V.
+
+is_string([]) -> true;
+is_string([H|T]) when is_integer(H), H >= 0, H =< 255 -> is_string(T);
+is_string(_) -> false.

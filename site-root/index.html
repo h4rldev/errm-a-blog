@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Login and Register Test</title>
+  </head>
+  <body>
+    <main>
+      <section class="register">
+        <h1>Register</h1>
+        <form id="register-form">
+          <p>
+            <label for="register-username">Username</label>
+            <input type="text" id="register-username" name="username" placeholder="Username" required>
+          </p>
+          <p>
+            <label for="register-password">Password</label>
+            <input type="password" id="register-password" name="password" placeholder="Password" required>
+          </p>
+          <p>
+            <label for="register_token">Register Token</label>
+            <input type="password" id="register_token" name="register_token" placeholder="Register Token" required>
+          </p>
+          <input type="submit" value="Register">
+        </form>
+      </section>
+      <section>
+        <h1>Login</h1>
+        <form id="login-form">
+          <p>
+            <label for="login-username">Username</label>
+            <input type="text" id="login-username" name="username" placeholder="Username" required>
+          </p>
+          <p>
+            <label for="login-password">Password</label>
+            <input type="password" id="login-password" name="password" placeholder="Password" required>
+          </p>
+          <input type="submit" value="Login">
+        </form>
+      </section>
+    </main>
+    <script src="script.js"></script>
+  </body>
+</html>
