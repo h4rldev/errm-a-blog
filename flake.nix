@@ -123,35 +123,51 @@
       errm-a-blog-debug = errm-debug;
     };
 
-    devShells.${system}.default = pkgs.mkShell {
-      name = "errm-a-blog";
+    devShells.${system} = {
+      backend = pkgs.mkShell {
+        name = "errm-a-blog-backend";
 
-      buildInputs = [
-        beamPackages.erlang
-        beamPackages.rebar3
-        pkgs.brotli
-        pkgs.file
-        pkgs.sqlite
-        pkgs.pkg-config
-        pkgs.libargon2
-      ];
+        buildInputs = [
+          beamPackages.erlang
+          beamPackages.rebar3
+          pkgs.brotli
+          pkgs.file
+          pkgs.sqlite
+          pkgs.pkg-config
+          pkgs.libargon2
+        ];
 
-      packages = with pkgs; [
-        erlang-language-platform
-        just
-        p7zip
-      ];
+        packages = with pkgs; [
+          erlang-language-platform
+          just
+        ];
 
-      shellHook = ''
-        mkdir -p _checkouts
-        export ERL_ROOT="${beamPackages.erlang}/lib/erlang/"
-        ${builtins.concatStringsSep "\n" (map (dep: ''
-            for app in ${dep}/lib/erlang/lib/*; do
-              ln -sfn "$app" _checkouts/$(basename "$app")
-            done
-          '')
-          myDeps)}
-      '';
+        shellHook = ''
+          mkdir -p _checkouts
+          export ERL_ROOT="${beamPackages.erlang}/lib/erlang/"
+          ${builtins.concatStringsSep "\n" (map (dep: ''
+              for app in ${dep}/lib/erlang/lib/*; do
+                ln -sfn "$app" _checkouts/$(basename "$app")
+              done
+            '')
+            myDeps)}
+        '';
+      };
+
+      frontend = pkgs.mkShell {
+        name = "errm-a-blog-frontend";
+
+        buildInputs = with pkgs; [
+          deno
+          biome
+        ];
+
+        packages = with pkgs; [
+          svelte-language-server
+          svelte-check
+          typescript-language-server
+        ];
+      };
     };
   };
 }
