@@ -1,7 +1,6 @@
 <script>
 import { SvelteDate } from "svelte/reactivity";
 import Cell from "$components/Cell.svelte";
-import Header from "$components/Header.svelte";
 import Heading from "$components/Heading.svelte";
 import Link from "$components/Link.svelte";
 import ListenBrainz from "$components/ListenBrainz.svelte";
@@ -20,11 +19,8 @@ const age = $derived(
 );
 </script>
 
-<Header />
-
 <main>
-  <section>
-    <Cell>
+    <Cell title="about">
       <Heading level="1">
         Hello, and welcome!
       </Heading>
@@ -63,9 +59,7 @@ const age = $derived(
         I also have a Ko-fi page, where you can support me, <Link href="https://ko-fi.com/h4rl3h">here</Link>.
       </p>
     </Cell>
-    <Cell>
-      <ListenBrainz />
+    <Cell title="listening">
+      <ListenBrainz refresh_interval={7500} />
     </Cell>
-
-  </section>
 </main>

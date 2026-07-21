@@ -9,8 +9,10 @@ result
 *.crashdump
 *.env
 *.db
-*.json
+compile-commands.json
+errm-config.json
 
+site-root
 
 !.envrc
 !*.env.public

@@ -1,6 +1,9 @@
 -module(posts_api).
 -export([get_all_posts/1, get_post/1, create_post/1, update_post/1, delete_post/1]).
 
+-define(POST_ORDER, [id, slug, author_id, title, summary, content_markdown, tags, last_edited_at, posted_at]).
+
+
 -spec get_all_posts(errm_http:request()) -> {ok, errm_http:response()}.
 get_all_posts(Req) ->
   Params = maps:get(params, Req, #{}),
@@ -71,7 +74,7 @@ delete_post(Req) ->
             Slug -> sql_delete_post(UserId, {slug, Slug})
           end;
         IdBin when is_binary(IdBin) ->
-          case string:to_integer(IdBin) of
+          case string:to_integer(binary_to_list(IdBin)) of
             {IntId, []} when is_integer(IntId) -> sql_delete_post(UserId, {id, IntId});
             _ ->
               response_utils:error(400, "Invalid id")
@@ -99,7 +102,7 @@ fetch_posts(Db, Amount) ->
         <<"amount">> => length(Posts),
         <<"posts">> => Posts
       },
-      response_utils:ok(Response);
+      response_utils:ok(Response, ?POST_ORDER);
     {error, Reason} ->
       logger:error("Error fetching posts: ~p", [Reason]),
       response_utils:error(500, "Database error")
@@ -116,7 +119,7 @@ fetch_post_by_id(Id) ->
         {ok, []} ->
           response_utils:error(404, "Post not found");
         {ok, [Row]} ->
-          response_utils:ok(format_post(Row));
+          response_utils:ok(format_post(Row), ?POST_ORDER);
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -133,7 +136,7 @@ fetch_post_by_slug(Slug) ->
         {ok, []} ->
           response_utils:error(404, "Post not found");
         {ok, [Row]} ->
-          response_utils:ok(format_post(Row));
+          response_utils:ok(format_post(Row), ?POST_ORDER);
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -287,7 +290,7 @@ fetch_updated_post(Db, Identifier) ->
   case Identifier of
     {id, Id} ->
       case errm_sqlite:query(Db, "SELECT * FROM posts WHERE id = ? LIMIT 1", [Id]) of
-        {ok, [Row]} -> response_utils:ok(Row);
+        {ok, [Row]} -> response_utils:ok(format_post(Row), ?POST_ORDER);
         {ok, []} -> response_utils:error(404, "Post not found");
         {error, Reason} ->
           logger:error("Error fetching post: ~p", [Reason]),
@@ -295,7 +298,7 @@ fetch_updated_post(Db, Identifier) ->
       end;
     {slug, Slug} ->
       case errm_sqlite:query(Db, "SELECT * FROM posts WHERE slug = ? LIMIT 1", [Slug]) of
-        {ok, [Row]} -> response_utils:ok(Row);
+        {ok, [Row]} -> response_utils:ok(format_post(Row), ?POST_ORDER);
         {ok, []} -> response_utils:error(404, "Post not found");
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
@@ -318,13 +321,12 @@ sql_delete_post(UserId, Identifier) ->
       SqlStr = lists:flatten(Sql),
       Params = WhereArgs ++ [UserId],
       case errm_sqlite:query(Db, SqlStr, Params) of
-        {ok, 0} ->
-          response_utils:error(404, "Post not found or not authorized");
-        {ok, 1} ->
+        {ok, []} ->
           {ok, {204, #{}, <<>>}};
         {error, Reason1} ->
           logger:error("Error deleting post: ~p", [Reason1]),
-          response_utils:error(500, "Couldn't delete post due to database error")
+          response_utils:error(500, "Couldn't delete post due to database error");
+        _ -> response_utils:error(500, "Couldn't find post to delete")
       end
   end.
 

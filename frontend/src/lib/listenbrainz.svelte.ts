@@ -5,6 +5,7 @@ export interface TrackMetadata {
 	additional_info?: {
 		release_mbid?: string;
 		artist_mbids?: string[];
+		track_mbid?: string;
 		recording_mbid?: string;
 		cover_art_url?: string;
 	};
@@ -45,12 +46,12 @@ export const create_listenbrainz = (
 		return new Date(timestamp * 1000).toLocaleTimeString();
 	};
 
-	const get_elapsed_seconds = (listen: Listen): number => {
+	const get_elapsed_seconds = (listen: Listen | null): number => {
+		if (!listen) return 0;
 		return Math.floor(Date.now() / 1000 - listen.listened_at);
 	};
 
 	const fetch_now_playing = async () => {
-		console.log("fetch_now_playing called at", new Date().toISOString());
 		try {
 			is_loading = true;
 			error = null;

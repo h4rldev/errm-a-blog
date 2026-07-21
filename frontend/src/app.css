@@ -65,6 +65,8 @@
 
 :root {
   --color-text: var(--latte-text);
+  --color-subtext: var(--latte-subtext1);
+  --color-subtext-alt: var(--latte-subtext0);
   --color-link: var(--latte-blue);
   --color-bg: var(--latte-crust);
   --color-primary: var(--latte-base);
@@ -78,6 +80,8 @@
 
 .dark {
   --color-text: var(--mocha-text);
+  --color-subtext: var(--mocha-subtext1);
+  --color-subtext-alt: var(--mocha-subtext0);
   --color-bg: var(--mocha-crust);
   --color-link: var(--mocha-blue);
   --color-primary: var(--mocha-base);

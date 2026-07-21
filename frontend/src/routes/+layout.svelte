@@ -1,5 +1,7 @@
 <script lang="ts">
 import "../app.css";
+import Footer from "$components/Footer.svelte";
+import Header from "$components/Header.svelte";
 import favicon from "$lib/assets/favicon.svg";
 import { theme } from "$lib/stores/theme.svelte";
 
@@ -15,23 +17,23 @@ let { children } = $props();
   <script>
     (function() {
       let theme = localStorage.getItem('theme');
-      if (!theme) {
+      if (!theme)
         theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-      }
-      if (theme === 'dark') {
+      if (theme === 'dark')
         document.documentElement.classList.add('dark');
-      }
     })();
   </script>
 </svelte:head>
 
+<Header />
 {@render children()}
+<Footer />
 
 <style>
 @reference '$tailcss';
 
 :global(html) {
-  @apply bg-[var(--color-bg)] text-[var(--color-text)];
+  @apply bg-(--color-bg) text-(--color-text) max-w-full;
 }
 
 </style>

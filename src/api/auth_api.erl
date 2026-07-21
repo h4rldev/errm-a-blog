@@ -1,5 +1,5 @@
 -module(auth_api).
--export([register/1, login/1]).
+-export([register/1, login/1, logout/1]).
 
 -spec register(errm_http:request()) -> {ok, errm_http:response()}.
 register(Req) ->
@@ -18,6 +18,20 @@ login(Req) ->
       handle_login(Username, Password)
   end.
 
+-spec logout(errm_http:request()) -> {ok, errm_http:response()}.
+logout(Req) ->
+  case blog_secrets:get_cookie_key() of
+    {ok, Key} when is_binary(Key) ->
+      Jar = errm_http_cookie_jar:from_request(Req, Key),
+      Jar1 = errm_http_cookie_jar:put(Jar, <<"session">>, <<>>, #{max_age => 0}),
+      CookieHeaders = errm_http_cookie_jar:to_headers(Jar1, Key),
+      {ok, {Status, Headers, Body}} = response_utils:ok(#{message => <<"Logged out">>}),
+      FinalResponse = errm_http_cookie:add_cookies({Status, Headers, Body}, CookieHeaders),
+      {ok, FinalResponse};
+    {error, Reason} ->
+      logger:error("Error getting cookie key: ~p", [Reason]),
+      response_utils:error(500, "Temporary logout error")
+  end.
 
 validate_register_request(Req) ->
   case maps:get(headers, Req, #{}) of

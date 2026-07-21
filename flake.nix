@@ -140,6 +140,16 @@
         packages = with pkgs; [
           erlang-language-platform
           just
+          (writeShellScriptBin "switch-shell" ''
+            CONTENT=$(cat ./.env-choice)
+            if [[ "$CONTENT" == "backend" ]]; then
+              echo "Switching to frontend"
+              echo "frontend" > .env-choice
+            else
+              echo "Switching to backend"
+              echo "backend" > .env-choice
+            fi
+          '')
         ];
 
         shellHook = ''
@@ -166,6 +176,18 @@
           svelte-language-server
           svelte-check
           typescript-language-server
+          tailwindcss-language-server
+          watchexec
+          (writeShellScriptBin "switch-shell" ''
+            CONTENT=$(cat ./.env-choice)
+            if [[ "$CONTENT" == "backend" ]]; then
+              echo "Switching to frontend"
+              echo "frontend" > .env-choice
+            else
+              echo "Switching to backend"
+              echo "backend" > .env-choice
+            fi
+          '')
         ];
       };
     };
