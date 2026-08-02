@@ -3,7 +3,7 @@ CREATE TABLE users (
   uuid TEXT UNIQUE NOT NULL, /* Never updated */
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
-  role TEXT CHECK(role IN ('poster', 'administrator')) NOT NULL,
+  role TEXT CHECK(role IN ('poster', 'administrator', 'super-administrator')) NOT NULL,
   created_at INTEGER DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER /* Only updated on name or password change */
 );

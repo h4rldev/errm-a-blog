@@ -4,6 +4,8 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 @theme {
+  --breakpoint-xs: 25rem;
+
   --font-arimo: "Arimo Nerd Font Propo", sans-serif;
   --font-mono: "Maple Mono Nerd Font", monospace;
 
@@ -76,6 +78,7 @@
   --color-surface-secondary: var(--latte-surface1);
   --color-overlay: var(--latte-overlay0);
   --color-error: var(--latte-red);
+  --color-confirm: var(--latte-green);
 }
 
 .dark {
@@ -91,4 +94,5 @@
   --color-surface-secondary: var(--mocha-surface1);
   --color-overlay: var(--mocha-overlay0);
   --color-error: var(--mocha-red);
+  --color-confirm: var(--mocha-green);
 }

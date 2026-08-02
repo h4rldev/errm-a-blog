@@ -19,7 +19,7 @@ const actual_title = $derived(title.toUpperCase());
   @reference '$tailcss';
 
   .title-holder {
-    @apply absolute top-2 right-2 text-(--color-accent) text-[7px] select-none;
+    @apply absolute top-1 right-2 text-(--color-accent) text-[8px] select-none;
   }
 
   .cell-container {
@@ -27,6 +27,6 @@ const actual_title = $derived(title.toUpperCase());
   }
 
   .cell {
-    @apply border-2 p-4 m-2 lg:w-200 lg:max-w-200 w-[90%] max-w-[90%] border-(--color-overlay) bg-(--color-bg) relative;
+    @apply border-2 p-4 m-2 lg:w-200 md:max-w-180 md:w-180 lg:max-w-200 xs:w-96 xs:max-w-96 w-82 max-w-82 border-(--color-overlay) bg-(--color-bg) relative;
   }
 </style>

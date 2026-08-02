@@ -9,15 +9,15 @@
       "locked": {
         "lastModified": 1784079551,
         "narHash": "sha256-Vkvc5LbV0mXg3fmiZjlm4ji+4XKZ7tUiM8XKuy3AsV8=",
-        "owner": "h4rldev",
-        "repo": "errm-ENV",
+        "ref": "refs/heads/main",
         "rev": "87244157afc19c7eaeade086743cbe7e57213609",
-        "type": "github"
+        "revCount": 3,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-ENV"
       },
       "original": {
-        "owner": "h4rldev",
-        "repo": "errm-ENV",
-        "type": "github"
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-ENV"
       }
     },
     "errm-http": {
@@ -27,17 +27,17 @@
         ]
       },
       "locked": {
-        "lastModified": 1784654216,
-        "narHash": "sha256-dzuo79zzsR245OKWPwRS9fvhdp2Pm9WUA1p0VVfVxKs=",
-        "owner": "h4rldev",
-        "repo": "errm-HTTP",
-        "rev": "3bd9eba44d69f3b968e27f3e114b3acf7363e24b",
-        "type": "github"
+        "lastModified": 1784725073,
+        "narHash": "sha256-+wdVApa1DYrtADf1WPl0XsRnf9ABQmhavvhWY9Zxww8=",
+        "ref": "refs/heads/main",
+        "rev": "bba847b44a4422f6add61eff6e91570508ff057d",
+        "revCount": 32,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-HTTP"
       },
       "original": {
-        "owner": "h4rldev",
-        "repo": "errm-HTTP",
-        "type": "github"
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-HTTP"
       }
     },
     "errm-json": {
@@ -49,15 +49,15 @@
       "locked": {
         "lastModified": 1784646585,
         "narHash": "sha256-b71Iu6xLkVsZ+SNoDhBa1q2BfWOExIWu6h9QbzXBgLw=",
-        "owner": "h4rldev",
-        "repo": "errm-JSON",
+        "ref": "refs/heads/main",
         "rev": "8e144aebeeafb828188b9aa115d9061cac67ae5e",
-        "type": "github"
+        "revCount": 10,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-JSON"
       },
       "original": {
-        "owner": "h4rldev",
-        "repo": "errm-JSON",
-        "type": "github"
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-JSON"
       }
     },
     "errm-json_2": {
@@ -89,15 +89,15 @@
       "locked": {
         "lastModified": 1783865089,
         "narHash": "sha256-a9chm6Jszupjqal8Wgh/u/5X0TdJgDUb+mKOPQU1L+A=",
-        "owner": "h4rldev",
-        "repo": "errm-JWT",
+        "ref": "refs/heads/main",
         "rev": "123d7e56d7b927f9d6837a87d35785f34d4fa1b9",
-        "type": "github"
+        "revCount": 3,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-JWT"
       },
       "original": {
-        "owner": "h4rldev",
-        "repo": "errm-JWT",
-        "type": "github"
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-JWT"
       }
     },
     "errm-sqlite": {
@@ -109,15 +109,15 @@
       "locked": {
         "lastModified": 1784373655,
         "narHash": "sha256-H68wKS6ZKjuH6kZv14/knZt+P2vYU8QShcugnwR3SJc=",
-        "owner": "h4rldev",
-        "repo": "errm-SQLite",
+        "ref": "refs/heads/main",
         "rev": "69f2d1b71fe2ab91767c01a8e87968c442ddc717",
-        "type": "github"
+        "revCount": 24,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-SQLite"
       },
       "original": {
-        "owner": "h4rldev",
-        "repo": "errm-SQLite",
-        "type": "github"
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-SQLite"
       }
     },
     "errm-uuid": {
@@ -147,15 +147,35 @@
       "locked": {
         "lastModified": 1783665908,
         "narHash": "sha256-WenE3Tp4itLDYW0/Zau+mHmFSv/2o9u1wHOxhHga/RU=",
-        "owner": "h4rldev",
-        "repo": "errm-UUID",
+        "ref": "refs/heads/main",
         "rev": "d72b1e7702fe1dd5f9e31da3213fb09dc5726566",
-        "type": "github"
+        "revCount": 3,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-UUID"
       },
       "original": {
-        "owner": "h4rldev",
-        "repo": "errm-UUID",
-        "type": "github"
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-UUID"
+      }
+    },
+    "errm-ws": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1785360901,
+        "narHash": "sha256-l67mmJ9j7NAFKUQcmR6TUpBMagCw0GITgo5z1QKYHyw=",
+        "ref": "refs/heads/main",
+        "rev": "cc4269adaec00c2cc7c2a04e524003e73d2fba19",
+        "revCount": 2,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-WS"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-WS"
       }
     },
     "nixpkgs": {
@@ -214,6 +234,7 @@
         "errm-jwt": "errm-jwt",
         "errm-sqlite": "errm-sqlite",
         "errm-uuid": "errm-uuid_2",
+        "errm-ws": "errm-ws",
         "nixpkgs": "nixpkgs_3"
       }
     }

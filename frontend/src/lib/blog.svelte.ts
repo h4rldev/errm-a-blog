@@ -40,6 +40,6 @@ export const blog = {
 	async logout() {
 		await blog_api.logout();
 		user = null;
-		goto("/login");
+		goto("/blog/");
 	},
 };

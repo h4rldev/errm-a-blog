@@ -1,5 +1,5 @@
 -module(blog_middlewares).
--export([get/0, auth_middleware/2, get_user_id/1, get_claims/1]).
+-export([get/0, auth_middleware/2, get_user_id/1, get_claims/1, authenticate/1]).
 
 get() ->
   CompressionConfig = #{
@@ -12,6 +12,18 @@ get() ->
     allowed => [zstd, brotli, gzip, deflate]
   },
 
+  CORS = errm_http_cors:make(#{
+    policies => [
+      #{
+        origin => ["http://localhost:5173", "http://localhost", "http://127.0.0.1:5173", "http://127.0.0.1"],
+        methods => [get, post, put, delete, patch, options],
+        headers => ["Content-Type", "Authorization", "Accept", "Origin"],
+        credentials => true,
+        max_age => 86400
+      }
+    ]
+  }),
+
   ProtectedPrefixes = [
     ["api"],
     ["admin"]
@@ -19,14 +31,20 @@ get() ->
 
   PublicRoutes = [
     {get, ["api", "posts"]},
-    {get, ["api", "posts", ':*']},
+    {get, ["api", "post", ':*']},
+    {get, ["api", "tags"]},
 
+    {post, ["api", "guestbook"]},
     {post, ["api", "auth", "register"]},
-    {post, ["api", "auth", "login"]}
+    {post, ["api", "auth", "login"]},
+
+    {post, ["api", "post", ':post_id', "comments"]},
+    {get, ["ws"]}
   ],
 
   [
    errm_http_compress:compress(CompressionConfig),
+   CORS,
    errm_http_cookie:with_cookies(),
    auth_middleware(ProtectedPrefixes, PublicRoutes),
    errm_http_compress:decompress(DecompressionConfig)
@@ -93,7 +111,9 @@ verify_jwt(Token, Secret) ->
     {ok, Claims} ->
       case maps:get(<<"sub">>, Claims, undefined) of
         undefined -> {error, missing_sub};
-        UserId -> {ok, UserId, Claims}
+        UserId -> 
+          logger:debug("JWT validated successfully, got user id ~p", [UserId]),
+          {ok, UserId, Claims}
       end;
     {error, Reason} -> {error, {invalid_token, Reason}}
   end.

@@ -11,7 +11,8 @@
         errm_jwt,
         errm_uuid,
         errm_sqlite,
-        errm_env
+        errm_env,
+        errm_ws
     ]},
     {env, []},
     {modules, []},

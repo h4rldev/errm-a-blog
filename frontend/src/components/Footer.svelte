@@ -24,8 +24,12 @@ const repo_url = __REPO_URL__;
 <style>
   @reference '$tailcss';
 
+  footer {
+    @apply relative;
+  }
+
   ul {
-    @apply flex flex-row text-(--color-text) justify-center;
+    @apply flex flex-row text-(--color-text) justify-center flex-wrap;
   }
 
   ul > *:not(:last-child)::after {

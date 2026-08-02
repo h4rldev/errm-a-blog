@@ -6,6 +6,8 @@ start() ->
   blog_secrets:init(),
   blog_db:init(),
 
+  {ok, _} = pg:start_link(blog_ws_group),
+
   Level = case string:lowercase(blog_config:get(internal_log_level)) of
     "emergency" -> emergency;
     "alert" -> alert;

@@ -23,7 +23,14 @@ logout(Req) ->
   case blog_secrets:get_cookie_key() of
     {ok, Key} when is_binary(Key) ->
       Jar = errm_http_cookie_jar:from_request(Req, Key),
-      Jar1 = errm_http_cookie_jar:put(Jar, <<"session">>, <<>>, #{max_age => 0}),
+      DeleteOpts = #{
+        max_age => 0,
+        path => <<"/">>,
+        http_only => true,
+        secure => false,
+        same_site => lax
+      },
+      Jar1 = errm_http_cookie_jar:put(Jar, <<"session">>, <<"">>, DeleteOpts),
       CookieHeaders = errm_http_cookie_jar:to_headers(Jar1, Key),
       {ok, {Status, Headers, Body}} = response_utils:ok(#{message => <<"Logged out">>}),
       FinalResponse = errm_http_cookie:add_cookies({Status, Headers, Body}, CookieHeaders),
@@ -60,36 +67,68 @@ validate_register_request(Req) ->
   end.
 
 handle_registration(Username, Password, RegisterToken) ->
-  case blog_secrets:get_register_token() of
-    {error, not_found} ->
-      logger:error("No register token found in secrets"),
-      response_utils:error(500, "Registration temporarily unavailable");
+  case blog_secrets:get_super_admin_token() of
     {ok, Token} when Token =:= RegisterToken ->
-      create_user(Username, Password);
-    {ok, Token} ->
-      logger:error("Invalid register token, expected ~p, got ~p", [Token, RegisterToken]),
-      response_utils:error(400, "Invalid register token")
+      create_super_user(Username, Password);
+    {ok, _Token} ->
+      logger:error("Invalid super admin token"),
+      response_utils:error(400, "Invalid super admin token");
+    _ ->
+      logger:debug("Couldn't validate super admin token, registering manually"),
+      case blog_secrets:get_register_token() of
+        {error, not_found} ->
+          logger:error("No register token found in secrets"),
+          response_utils:error(500, "Registration temporarily unavailable");
+        {ok, Token1} when Token1 =:= RegisterToken ->
+          create_user(Username, Password);
+        {ok, _Token1} ->
+          logger:error("Invalid register token"),
+          response_utils:error(400, "Invalid register token")
+      end
   end.
 
 create_user(Username, Password) ->
   case blog_db:db() of
-    {error, Reason1} ->
-      logger:error("Error opening database: ~p", [Reason1]),
+    {error, Reason} ->
+      logger:error("Error opening database: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
       case errm_argon:hash(Password, interactive) of
-        {error, Reason2} ->
-          logger:error("Error hashing password: ~p", [Reason2]),
+        {error, Reason1} ->
+          logger:error("Error hashing password: ~p", [Reason1]),
           response_utils:error(500, "Password processing error");
         {ok, Hash} ->
           Uuid = errm_uuid:to_string(errm_uuid:v7()),
-          insert_user(Db, Uuid, Username, Hash)
+          insert_user(Db, Uuid, Username, Hash, <<"poster">>)
       end
   end.
 
-insert_user(Db, Uuid, Username, Hash) ->
+create_super_user(Username, Password) ->
+  case blog_db:db() of
+    {error, Reason} ->
+      logger:error("Error opening database: ~p", [Reason]),
+      response_utils:error(500, "Database error");
+    {ok, Db} ->
+      case errm_sqlite:query(Db, "SELECT * FROM users WHERE role = ? LIMIT 1", [<<"super-administrator">>]) of
+        {ok, _} ->
+          logger:alert("Someone tried to create a super administrator when there's already one, reissue a new token ASAP."),
+          response_utils:error(400, "Only 1 Super Administrator allowed");
+        {error, _} ->
+          case errm_argon:hash(Password, interactive) of
+            {error, Reason1} ->
+              logger:error("Error hashing password: ~p", [Reason1]),
+              response_utils:error(500, "Password processing error");
+            {ok, Hash} ->
+              Uuid = errm_uuid:to_string(errm_uuid:v7()),
+              insert_user(Db, Uuid, Username, Hash, <<"super-administrator">>)
+          end
+      end
+  end.
+
+
+insert_user(Db, Uuid, Username, Hash, Role) ->
   Sql = "INSERT INTO users (uuid, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-  case errm_sqlite:query(Db, Sql, [list_to_binary(Uuid), list_to_binary(Username), Hash, <<"poster">>]) of
+  case errm_sqlite:query(Db, Sql, [list_to_binary(Uuid), list_to_binary(Username), Hash, Role]) of
     {ok, _} ->
       Message = io_lib:format("Account ~s (~s) created successfully!", [Username, Uuid]),
       MessageBin = iolist_to_binary(Message),
@@ -98,7 +137,6 @@ insert_user(Db, Uuid, Username, Hash) ->
       logger:error("Error creating account: ~p", [Reason]),
       response_utils:error(500, "Error creating account")
   end.
-
 
 validate_login_request(Req) ->
   case maps:get(headers, Req, #{}) of
@@ -173,9 +211,9 @@ set_session_cookie(Token) ->
   CookieOpts = #{
     path => <<"/">>,
     http_only => true,
-    secure => true,
+    secure => false,
     same_site => lax,
-    max_age => 30 * 86400   % match JWT TTL
+    max_age => 30 * 86400
   },
   Jar0 = errm_http_cookie_jar:new(),
   Jar1 = errm_http_cookie_jar:put(Jar0, CookieName, Token, CookieOpts),

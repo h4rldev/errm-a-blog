@@ -1,3 +1,6 @@
+const is_dev = import.meta.env.DEV;
+const is_prod = import.meta.env.PROD;
+
 export interface Post {
 	id: number;
 	slug: string;
@@ -30,22 +33,48 @@ export interface Register {
 	register_token: string;
 }
 
+const convert_unix_timestamp_to_date = (number: number): string => {
+	const date = new Date(number * 1000);
+	const now = new Date();
+
+	const same_day =
+		date.getFullYear() === now.getFullYear() &&
+		date.getMonth() === now.getMonth() &&
+		date.getDate() === now.getDate();
+
+	if (same_day) return date.toLocaleTimeString();
+
+	const time = date.toLocaleTimeString();
+	const day = date.toLocaleDateString();
+	return `${day} ${time}`;
+};
+
 const request = async <T = any>(
 	endpoint: string,
 	method: string,
 	body?: any,
 ): Promise<T> => {
 	const headers: HeadersInit = { "Content-Type": "application/json" };
-	const res = await fetch(endpoint, {
+
+	const url = is_dev
+		? "http://localhost:8080"
+		: is_prod
+			? ""
+			: "http://localhost:8080";
+	const full_url = url + endpoint;
+
+	const res = await fetch(full_url, {
 		method,
 		headers,
 		credentials: "include",
 		body: body ? JSON.stringify(body) : undefined,
 	});
 
-	const data = await res.json();
-	if (!res.ok) throw new Error(data.message || "REST API error");
-	return data as T;
+	let data = null;
+	if (res.status !== 204) data = await res.json();
+	if (!res.ok) throw new Error(data.error || "REST API error");
+	if (data !== null) return data as T;
+	return;
 };
 
 export const blog_api = {
@@ -70,4 +99,6 @@ export const blog_api = {
 		request<Post>(`/api/post/${id_or_slug}`, "PUT", post),
 	delete_post: (id_or_slug: string): Promise<void> =>
 		request<void>(`/api/post/${id_or_slug}`, "DELETE"),
+
+	convert_unix_timestamp_to_date,
 };

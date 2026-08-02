@@ -1,14 +1,16 @@
 -module(blog_secrets).
--export([init/0, get_cookie_key/0, get_jwt_secret/0, get_register_token/0]).
+-export([init/0, get_cookie_key/0, get_jwt_secret/0, get_register_token/0, get_super_admin_token/0]).
 
 init() ->
   JWT = get_or_gen("JWT_SECRET"),
   Cookie = get_or_gen("COOKIE_SECRET"),
-  Token = get_valid_register_token(),
+  SuperAdminToken = get_valid_super_admin_token(),
+  RegisterToken = get_valid_register_token(),
 
   errm_http:set_secret(jwt_secret, JWT),
   errm_http:set_secret(cookie_key, Cookie),
-  errm_http:set_secret(register_token, Token).
+  errm_http:set_secret(super_admin_token, SuperAdminToken),
+  errm_http:set_secret(register_token, RegisterToken).
 
 
 -spec get_cookie_key() -> {ok, term()} | {error, not_found}.
@@ -23,6 +25,10 @@ get_jwt_secret() ->
 get_register_token() ->
   errm_http:get_secret(register_token).
 
+-spec get_super_admin_token() -> {ok, term()} | {error, not_found}.
+get_super_admin_token() ->
+  errm_http:get_secret(super_admin_token).
+
 get_valid_register_token() ->
   case errm_env:get("REGISTER_TOKEN", "errm.env") of
     {ok, Token} ->
@@ -36,6 +42,21 @@ get_valid_register_token() ->
         _ -> generate_register_token()
       end;
     _ -> generate_register_token()
+  end.
+
+get_valid_super_admin_token() ->
+  case errm_env:get("SUPER_ADMIN_TOKEN", "errm.env") of
+    {ok, Token} ->
+      case errm_env:get("SUPER_ADMIN_TOKEN_EXPIRY", "errm.env") of
+        {ok, ExpiryStr} ->
+          Expiry = list_to_integer(ExpiryStr),
+          Now = erlang:system_time(second),
+          if Now > Expiry -> generate_super_admin_token();
+             true -> Token
+          end;
+        _ -> generate_super_admin_token()
+      end;
+    _ -> generate_super_admin_token()
   end.
 
 -spec get_or_gen(nonempty_string()) -> binary().
@@ -85,6 +106,12 @@ generate_register_token() ->
   set_env_var("REGISTER_TOKEN_EXPIRY", integer_to_list(Expiry)),
   Token.
 
+generate_super_admin_token() ->
+  Token = base64:encode(crypto:strong_rand_bytes(24), #{mode => 'urlsafe', padding => false}),
+  Expiry = erlang:system_time(second) + 86400,  % 24 hours
+  set_env_var("SUPER_ADMIN_TOKEN", Token),
+  set_env_var("SUPER_ADMIN_TOKEN_EXPIRY", integer_to_list(Expiry)),
+  Token.
 
 set_env_var(Key, Value) ->
   KeyBin = list_to_binary(Key),

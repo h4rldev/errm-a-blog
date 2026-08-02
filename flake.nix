@@ -4,27 +4,31 @@
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
     errm-json = {
-      url = "github:h4rldev/errm-JSON";
+      url = "git+https://codeberg.org/h4rl/errm-JSON";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     errm-uuid = {
-      url = "github:h4rldev/errm-UUID";
+      url = "git+https://codeberg.org/h4rl/errm-UUID";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     errm-jwt = {
-      url = "github:h4rldev/errm-JWT";
+      url = "git+https://codeberg.org/h4rl/errm-JWT";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     errm-http = {
-      url = "github:h4rldev/errm-HTTP";
+      url = "git+https://codeberg.org/h4rl/errm-HTTP";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     errm-env = {
-      url = "github:h4rldev/errm-ENV";
+      url = "git+https://codeberg.org/h4rl/errm-ENV";
       inputs.nixpkgs.follows = "nixpkgs";
     };
     errm-sqlite = {
-      url = "github:h4rldev/errm-SQLite";
+      url = "git+https://codeberg.org/h4rl/errm-SQLite";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+    errm-ws = {
+      url = "git+https://codeberg.org/h4rl/errm-WS";
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -38,6 +42,7 @@
     errm-http,
     errm-env,
     errm-sqlite,
+    errm-ws,
   }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs {inherit system;};
@@ -49,6 +54,7 @@
       errm-http.packages.${system}.errm-http-debug
       errm-env.packages.${system}.errm-env-debug
       errm-sqlite.packages.${system}.errm-sqlite-debug
+      errm-ws.packages.${system}.errm-ws-debug
     ];
 
     errm-prod = beamPackages.buildRebar3 {
@@ -64,6 +70,7 @@
         errm-env.packages.${system}.default
         errm-jwt.packages.${system}.default
         errm-sqlite.packages.${system}.default
+        errm-ws.packages.${system}.default
       ];
 
       nativeBuildInputs = with pkgs; [
@@ -71,7 +78,6 @@
       ];
 
       buildInputs = with pkgs; [
-        zstd
         brotli
         file
         just
@@ -104,7 +110,6 @@
       ];
 
       buildInputs = with pkgs; [
-        zstd
         brotli
         file
         just

@@ -1,8 +1,8 @@
 -module(user_api).
--export([get_user/1]).
+-export([get_current_user/1]).
 
--spec get_user(errm_http:request()) -> {ok, errm_http:response()}.
-get_user(Req) ->
+-spec get_current_user(errm_http:request()) -> {ok, errm_http:response()}.
+get_current_user(Req) ->
   case blog_middlewares:get_user_id(Req) of
     undefined -> response_utils:error(401, "Unauthorized");
     UserId ->
