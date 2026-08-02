@@ -12,6 +12,7 @@ A blog using the Errm... Stack, written in Erlang/OTP 28.
 - [errm-JWT](https://codeberg.org/h4rl/errm-JWT)
 - [errm-JSON](https://codeberg.org/h4rl/errm-JSON)
 - [errm-ARGON](https://codeberg.org/h4rl/errm-ARGON)
+- [errm-WS](https://codeberg.org/h4rl/errm-WS)
 
 ## Status
 
@@ -21,8 +22,10 @@ Not even close to a working prototype.
 
 - [x] - Properly implement `/api/auth/register`
 - [x] - Implement the rest of auth,
-- [ ] - Implement blog post endpoints
-- [ ] - Write more TODOs.
+- [x] - Implement blog post endpoints
+- [ ] - Implement proper websocket for post-comments
+- [ ] - Implement viewing, deleting and editing of post-comments.
+- [x] - Write more TODOs.
 
 ## License
 
