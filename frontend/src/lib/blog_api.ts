@@ -16,6 +16,20 @@ export interface PostsResponse {
 	posts: Post[];
 }
 
+export interface PostGuestbookEntry {
+  username: string | "anonymous";
+  content_markdown: string;
+}
+
+export interface GuestbookEntry extends PostGuestbookEntry {
+  id: number;
+  posted_at: number;
+  edited_at: number | null;
+}
+
+export type PostComment = PostGuestbookEntry;
+export type Comment = GuestbookEntry;
+
 export interface User {
 	username: string;
 	uuid: string;
@@ -78,27 +92,44 @@ const request = async <T = any>(
 };
 
 export const blog_api = {
-	register: (creds: Register) => request("/api/auth/register", "POST", creds),
-	login: (creds: Login) => request("/api/auth/login", "POST", creds),
-	logout: () => request("/api/auth/logout", "GET"),
+  register: (creds: Register) => request("/api/auth/register", "POST", creds),
+  login: (creds: Login) => request("/api/auth/login", "POST", creds),
+  logout: () => request("/api/auth/logout", "GET"),
 
-	get_me: () => request<User>("/api/me", "GET"),
+  get_me: () => request<User>("/api/me", "GET"),
 
-	get_posts: (amount?: string | number): Promise<PostsResponse> => {
-		const url = amount !== undefined ? `/api/posts/${amount}` : "/api/posts";
-		return request<PostsResponse>(url, "GET");
+  get_posts: (amount?: string | number): Promise<PostsResponse> => {
+	  const url = amount !== undefined ? `/api/posts/${amount}` : "/api/posts";
+	  return request<PostsResponse>(url, "GET");
 	},
 
-	get_post: (id_or_slug: undefined | string): Promise<Post> => {
+  get_post: (id_or_slug: undefined | string): Promise<Post> => {
 		if (id_or_slug === undefined) throw new Error("id_or_slug is undefined");
 		return request<Post>(`/api/post/${id_or_slug}`, "GET");
 	},
-	create_post: (post: Post): Promise<Post> =>
+  create_post: (post: Post): Promise<Post> =>
 		request<Post>("/api/post", "POST", post),
-	update_post: (id_or_slug: string, post: Partial<Post>): Promise<Post> =>
+  update_post: (id_or_slug: string, post: Partial<Post>): Promise<Post> =>
 		request<Post>(`/api/post/${id_or_slug}`, "PUT", post),
-	delete_post: (id_or_slug: string): Promise<void> =>
+  delete_post: (id_or_slug: string): Promise<void> =>
 		request<void>(`/api/post/${id_or_slug}`, "DELETE"),
+
+  create_guestbook_entry: (entry: PostGuestbookEntry): Promise<void> =>
+    request<void>("/api/guestbook", "POST", entry),
+  edit_guestbook_entry: (id: number, entry: GuestbookEntry): Promise<void> =>
+    request<void>(`/api/guestbook/${id}`, "PUT", entry),
+  delete_guestbook_entry: (id: number): Promise<void> =>
+    request<void>(`/api/guestbook/${id}`, "DELETE"),
+
+  create_comment: (comment: Comment, post_id: number): Promise<void> =>
+    request<void>(`/api/post/${post_id}/comments`, "POST", comment),
+  edit_comment: (id: number, comment: Comment): Promise<void> =>
+    request<void>(`/api/post/comment/${id}`, "PUT", comment),
+  delete_comment: (id: number): Promise<void> =>
+    request<void>(`/api/post/comment/${id}`, "DELETE"),
+
+  sleep: (ms: number) => 
+    new Promise((resolve) => setTimeout(resolve, ms)),
 
 	convert_unix_timestamp_to_date,
 };

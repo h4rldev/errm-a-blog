@@ -1,19 +1,13 @@
 <script lang="ts">
 import { onMount } from "svelte";
+import { blog } from "$lib/blog.svelte";
+import { blog_api, type Post, type User } from "$lib/blog_api";
+
 import Cell from "$components/Cell.svelte";
 import CreatePostModal from "$components/CreatePostModal.svelte";
 import EditPostModal from "$components/EditPostModal.svelte";
 import Heading from "$components/Heading.svelte";
 import Link from "$components/Link.svelte";
-import { blog } from "$lib/blog.svelte";
-import type { Post } from "$lib/blog_api";
-import { blog_api } from "$lib/blog_api";
-
-interface User {
-	uuid: string;
-	username: string;
-	role: string;
-}
 
 let posts = $state<Post[]>([]);
 let total_posts = $state<number>(0);
@@ -24,9 +18,18 @@ let show_modal = $state<boolean>(false);
 let show_edit_modal = $state<boolean>(false);
 let post_to_edit = $state<Post | null>(null);
 
-onMount(() => {
-	blog.check();
-});
+let query = $state<string>("");
+let filtered_posts = $derived(
+  query.trim() === "" ? posts : posts.filter((p) => {
+	  const q = query.trim().toLowerCase();
+	  return Object.entries(p).some(([k, v]) => {
+		  if (v === null || v === undefined) return false;
+			if (typeof v === "object")
+				return Object.values(v).some((x) => String(x ?? "").toLowerCase().includes(q));
+			return String(v).toLowerCase().includes(q);
+		});
+	}),
+);
 
 const load = async () => {
 	try {
@@ -40,35 +43,36 @@ const load = async () => {
 	}
 };
 
+const can_do_actions = () => {
+  return (!blog.loading && blog.is_logged_in) ? true : false;
+};
+
+const delete_post = async (post: Post) => {
+  if (!post) {
+    error = "No post found, something is wrong";
+    return;
+  }
+
+	if (!blog.is_logged_in) {
+    error = "You need to be logged in to delete a post";
+    blog_api.sleep(2000);
+		goto("/login");
+		return;
+	}
+
+	if (!confirm(`Delete ${post.title} by ${post.author.username}?`)) return;
+	await blog_api.delete_post(post.id);
+  load();
+};
+
+onMount(() => {
+  blog.check();
+});
 
 $effect(() => {
 	current_user = blog.user ? blog.user : null;
 	load();
 });
-
-const can_do_actions = () => {
-	if (!blog.loading && !blog.is_logged_in) return false;
-
-	return true;
-};
-
-const delete_post = async (post: Post) => {
-  if (!post) return;
-	if (!blog.is_logged_in) {
-		goto("/login");
-		return;
-	}
-
-	if (!confirm(`Delete ${post.title}?`)) return;
-
-	await blog_api.delete_post(post.id);
-  load();
-};
-
-
-const logout = () => {
-	blog.logout();
-};
 </script>
 
 <main>
@@ -85,12 +89,12 @@ const logout = () => {
             <p class="text-(--color-accent)">Welcome {current_user.username}</p>
           </li>
           {/if}
-          <li><button class="button-logout" onclick={logout}>Logout</button></li>
+          <li><button class="button-logout" onclick={blog.logout}>Logout</button></li>
         </ul>
       </div>
       {:else}
-      <div class="authentication">
-        <ul>
+      <div class="auth">
+        <ul class="auth-links">
           <li><Link href="/blog/login" target="_self">Login</Link></li>
           <li><Link href="/blog/register" target="_self">Register</Link></li>
         </ul>
@@ -99,100 +103,74 @@ const logout = () => {
     </div>
   </Cell>
   <div class="posts-wrapper">
- 
-
-  {#if show_modal}
-  <CreatePostModal show={show_modal} on_close={() => { show_modal = false; }} on_post={() => { load(); }} />
-  {:else if show_edit_modal}
-  <EditPostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_edit={() => { load(); }} post_id={post_to_edit?.id} post_slug={post_to_edit?.slug} />
-  {:else}
-  <Cell title="Posts">
-    {#if loading}
-      <p>Loading...</p>
-    {:else if error}
-      <p class="text-(--color-error)">{error}</p>
+    {#if show_modal}
+    <CreatePostModal show={show_modal} on_close={() => { show_modal = false; }} on_post={() => { load(); }} />
+    {:else if show_edit_modal}
+    <EditPostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_edit={() => { load(); }} post_id={post_to_edit?.id} post_slug={post_to_edit?.slug} />
     {:else}
-    <ul>
-      {#each posts as post}
+    <Cell title="Search">
+      <div class="search-container">
+        <input type="text" bind:value={query} placeholder="Search posts by any field..." class="search-input" />
+      </div>
+    </Cell>
+    <Cell title="Posts">
+      {#if loading}
+      <p>Loading...</p>
+      {:else if error}
+      <p class="text-(--color-error)">{error}</p>
+      {:else}
+      <ul>
+        {#each filtered_posts as post}
+        {@const identifier = post.slug === "" ? post.id : post.slug}
+        {@const summary = (post.summary || post.content).length > 50 ? (post.summary || post.content).slice(0, 50) + '...' : (post.summary || post.content)}
         <li>
-          {#if post.slug === ""}
-            {@const identifier = post.id}
-            {#if post.summary === ""}
-              {@const summary = post.content.length > 50 ? post.content.slice(0, 50) + '...' : post.content}
+          <Cell title="Post">
+            <div class="title-and-actions">
               <a href="/blog/post/{identifier}" class="post-link" target="_self">
-                <Cell title="Post">
-                  <Heading level="3">
-                    <span class="title">{post.title}</span>
-                  </Heading>
-                  <div class="post_specific">
-                    <p> {summary} </p>
-                    <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.last_edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.last_edited_at)} </p>
-                  </div>
-                </Cell>
+                <Heading level="3">
+                  <span class="title">{post.title}</span>
+                </Heading>
               </a>
-            {:else}
-              {@const summary = post.summary.length > 50 ? post.summary.slice(0, 50) + '...' : post.summary}
-              <a href="/blog/post/{identifier}" class="post-link" target="_self">
-                <Cell title="Post">
-                  <Heading level="3">
-                    <span class="title">{post.title}</span>
-                  </Heading>
-                  <div class="post_specific">
-                    <p> {summary} </p>
-                    <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.last_edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.last_edited_at)} </p>
-                  </div>
-                </Cell>
-              </a>
-            {/if}
-          {:else}
-            {@const identifier = post.slug}
-            {#if post.summary === ""}
-              {@const summary = post.content.length > 50 ? post.content.slice(0, 50) + '...' : post.content}
-                <Cell title="Post">
-                  <a href="/blog/post/{identifier}" class="post-link" target="_self">
-                    <Heading level="3">
-                      <span class="title">{post.title}</span>
-                    </Heading>
-                  </a>
-                  <div class="post_specific">
-                    <p> {summary} </p>
-                    <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.last_edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.last_edited_at)} </p>
-                  </div>
-                </Cell>
-            {:else}
-              {@const summary = post.summary.length > 50 ? post.summary.slice(0, 50) + '...' : post.summary}
-                <Cell title="Post">
-                  <div class="title-and-actions">
-                    <a href="/blog/post/{identifier}" class="post-link" target="_self">
-                      <Heading level="3">
-                        <span class="title">{post.title}</span>
-                      </Heading>
-                    </a>
-                    {#if post.author.uuid === blog.user?.uuid}
-                      <ul class="post-actions">
-                        <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
-                        <li><button class="button-delete" onclick={delete_post}>Delete</button></li>
-                      </ul>
-                    {/if}
-                  </div>
-                  <div class="post_specific">
-                    <p> {summary} </p>
-                    <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.last_edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.last_edited_at)} </p>
-                  </div>
-                </Cell>
-            {/if}
-          {/if}
+
+              {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
+              <ul class="post-actions">
+                <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
+                <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
+              </ul>
+              {/if}
+            </div>
+            <div class="post_specific">
+              <p> {summary} </p>
+              <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.last_edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.last_edited_at)} </p>
+            </div>
+          </Cell>
         </li>
-      {/each}
-    </ul>
+        {/each}
+      </ul>
+      {/if}
+    </Cell>
     {/if}
-  </Cell>
-  {/if}
   </div>
 </main>
 
 <style>
   @reference "$tailcss";
+
+  .search-container {
+    @apply flex flex-row justify-center w-full;
+  }
+
+  .search-input {
+    @apply bg-(--color-bg) text-(--color-text) p-2 w-full focus:border-(--color-accent) focus:outline-none focus:ring-(--color-accent) w-full mt-4;
+  }
+
+  .auth {
+    @apply flex flex-col justify-center;
+  }
+
+  .auth-links {
+    @apply inline-flex flex-wrap justify-center flex-row gap-4;
+  }
 
   .post-link:hover .title {
     @apply text-(--color-accent) underline;

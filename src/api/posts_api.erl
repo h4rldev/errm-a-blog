@@ -107,7 +107,7 @@ extract_tags([Row | Rest], Acc) ->
 -spec extract_tags_from_row(map()) -> [binary()].
 extract_tags_from_row(Row) when is_map(Row) ->
   TagsRaw = maps:get("tags", Row, <<"[]">>),
-  TagsBin = value_to_binary(TagsRaw),
+  TagsBin = blog_format:value_to_binary(TagsRaw),
   case is_binary(TagsBin) of
     true ->
       try
@@ -127,7 +127,7 @@ extract_tags_from_row(Row) when is_map(Row) ->
 convert_tags_to_binary([], Acc) ->
   Acc;
 convert_tags_to_binary([Tag | Rest], Acc) ->
-  BinTag = value_to_binary(Tag),
+  BinTag = blog_format:value_to_binary(Tag),
   convert_tags_to_binary(Rest, [BinTag | Acc]).
 
 -spec deduplicate_tags([binary()]) -> [binary()].
@@ -161,7 +161,7 @@ fetch_posts(Db, Amount) ->
       response_utils:ok(#{message => "No posts available"});
     {ok, Rows} ->
       logger:debug("Rows: ~p", [Rows]),
-      Posts = [format_post(Row) || Row <- Rows],
+      Posts = [blog_format:format_post(Row) || Row <- Rows],
       Response = #{
         <<"amount">> => length(Posts),
         <<"posts">> => Posts
@@ -183,7 +183,7 @@ fetch_post_by_id(Id) ->
         {ok, []} ->
           response_utils:error(404, "Post not found");
         {ok, [Row]} ->
-          response_utils:ok(format_post(Row), ?POST_ORDER);
+          response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -200,7 +200,7 @@ fetch_post_by_slug(Slug) ->
         {ok, []} ->
           response_utils:error(404, "Post not found");
         {ok, [Row]} ->
-          response_utils:ok(format_post(Row), ?POST_ORDER);
+          response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -352,7 +352,7 @@ fetch_updated_post(Db, Identifier) ->
   case Identifier of
     {id, Id} ->
       case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid WHERE posts.id = ? LIMIT 1", [Id]) of
-        {ok, [Row]} -> response_utils:ok(format_post(Row), ?POST_ORDER);
+        {ok, [Row]} -> response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
         {ok, []} -> response_utils:error(404, "Post not found");
         {error, Reason} ->
           logger:error("Error fetching post: ~p", [Reason]),
@@ -360,7 +360,7 @@ fetch_updated_post(Db, Identifier) ->
       end;
     {slug, Slug} ->
       case errm_sqlite:query(Db, "SELECT * FROM posts WHERE slug = ? LIMIT 1", [Slug]) of
-        {ok, [Row]} -> response_utils:ok(format_post(Row), ?POST_ORDER);
+        {ok, [Row]} -> response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
         {ok, []} -> response_utils:error(404, "Post not found");
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
@@ -391,47 +391,4 @@ sql_delete_post(UserId, Identifier) ->
         _ -> response_utils:error(500, "Couldn't find post to delete")
       end
   end.
--spec format_post(map()) -> map().
-format_post(Row) ->
-  AuthorMap = #{
-    <<"uuid">> => value_to_binary(maps:get("author_id", Row, undefined)),
-    <<"username">> => value_to_binary(maps:get("username", Row, undefined)),
-    <<"role">> => value_to_binary(maps:get("role", Row, undefined))
-  },
 
-  Rest = maps:without(["author_id", "username", "role"], Row),
-  FormattedRest = maps:fold(fun(Key, Value, Acc) ->
-    BinKey = key_to_binary(Key),
-    BinValue = value_to_binary(Value),
-    FinalValue = 
-      case BinKey of
-        <<"tags">> when is_binary(BinValue) ->
-          try errm_json:decode(BinValue) of
-            {ok, Decoded} -> Decoded;
-            _ -> BinValue
-          catch _:_ -> BinValue
-          end;
-        _ -> BinValue
-      end,
-    Acc#{BinKey => FinalValue}
-  end, #{}, Rest),
-
-  FormattedRest#{<<"author">> => AuthorMap}.
-
-key_to_binary(Key) when is_atom(Key) -> atom_to_binary(Key, utf8);
-key_to_binary(Key) when is_list(Key) -> list_to_binary(Key);
-key_to_binary(Key) when is_binary(Key) -> Key;
-key_to_binary(Key) -> iolist_to_binary(Key).
-
-value_to_binary(null) -> null;
-value_to_binary(undefined) -> null;
-value_to_binary(V) when is_list(V) ->
-    case is_string(V) of
-        true -> iolist_to_binary(V);
-        false -> V
-    end;
-value_to_binary(V) -> V.
-
-is_string([]) -> true;
-is_string([H|T]) when is_integer(H), H >= 0, H =< 255 -> is_string(T);
-is_string(_) -> false.

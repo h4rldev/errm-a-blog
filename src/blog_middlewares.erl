@@ -1,5 +1,5 @@
 -module(blog_middlewares).
--export([get/0, auth_middleware/2, get_user_id/1, get_claims/1, authenticate/1]).
+-export([get/0, auth_middleware/2, get_user_id/1, get_claims/1, authenticate/1, is_super_admin/1, is_admin/1]).
 
 get() ->
   CompressionConfig = #{
@@ -80,6 +80,32 @@ auth_middleware(ProtectedPrefixes, PublicRoutes) ->
         end
     end
   end.
+
+-spec is_super_admin(errm_http:request()) -> boolean().
+  is_super_admin(Req) ->
+    case get_claims(Req) of
+      undefined -> false;
+      Claims ->
+        case maps:get(<<"role">>, Claims, undefined) of
+          undefined -> false;
+          <<"super-administrator">> -> true;
+          _ -> false
+        end
+    end.
+
+-spec is_admin(errm_http:request()) -> boolean().
+  is_admin(Req) ->
+    case get_claims(Req) of
+      undefined -> false;
+      Claims -> 
+        case maps:get(<<"role">>, Claims, undefined) of
+          undefined -> false;
+          <<"super-administrator">> -> true;
+          <<"administrator">> -> true;
+          _ -> false
+        end
+    end.
+
 
 -spec get_user_id(errm_http:request()) -> binary() | undefined.
 get_user_id(Req) ->

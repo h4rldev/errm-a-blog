@@ -49,31 +49,32 @@ $effect(() => {
 <main>
   <Cell title="Login">
     <div class="form-container">
-    <Heading level="2">
-      Login
-    </Heading>
-    <form onsubmit={handle_submit} class="login-form">
-      <label class="username">
-        USERNAME
-        <input type="text" bind:value={username} autocomplete="username" required />
-      </label>
-      <label>
-        PASSWORD
-        <input type="password" bind:value={password} autocomplete="new-password" required />
-      </label>
-      {#if error}
-        <p class="text-(--color-error)">{error}</p>
-      {/if}
-      <button type="submit" class="button-login" disabled={loading}>
-        {loading ? 'Loading...' : 'Login'}
-      </button>
-    </form>
+      <Heading level="2">
+        Login
+      </Heading>
+      <form onsubmit={handle_submit} class="login-form">
+        <label class="username">
+          USERNAME
+          <input type="text" bind:value={username} autocomplete="username" required />
+        </label>
+        <label>
+          PASSWORD
+          <input type="password" bind:value={password} autocomplete="new-password" required />
+        </label>
+        {#if error}
+          <p class="text-(--color-error)">{error}</p>
+        {/if}
+        <button type="submit" class="button-login" disabled={loading}>
+          {loading ? 'Loading...' : 'Login'}
+        </button>
+      </form>
     </div>
   </Cell>
 </main>
 
 <style>
   @reference "$tailcss";
+
   .form-container {
     @apply flex flex-col justify-center items-center font-arimo mb-4;
   }

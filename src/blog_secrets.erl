@@ -100,14 +100,14 @@ gen_cookie_secret() ->
 
 
 generate_register_token() ->
-  Token = base64:encode(crypto:strong_rand_bytes(24), #{mode => 'urlsafe', padding => false}),
+  Token = base64:encode(crypto:strong_rand_bytes(24), #{mode => urlsafe, padding => false}),
   Expiry = erlang:system_time(second) + 86400,  % 24 hours
   set_env_var("REGISTER_TOKEN", Token),
   set_env_var("REGISTER_TOKEN_EXPIRY", integer_to_list(Expiry)),
   Token.
 
 generate_super_admin_token() ->
-  Token = base64:encode(crypto:strong_rand_bytes(24), #{mode => 'urlsafe', padding => false}),
+  Token = base64:encode(crypto:strong_rand_bytes(24), #{mode => urlsafe, padding => false}),
   Expiry = erlang:system_time(second) + 86400,  % 24 hours
   set_env_var("SUPER_ADMIN_TOKEN", Token),
   set_env_var("SUPER_ADMIN_TOKEN_EXPIRY", integer_to_list(Expiry)),

@@ -12,50 +12,36 @@ create_guestbook_entry(Req) ->
 
 -spec delete_guestbook_entry(errm_http:request()) -> {ok, errm_http:response()}.
 delete_guestbook_entry(Req) ->
-  case blog_middlewares:get_claims(Req) of
-    undefined -> response_utils:error(401, "Unauthorized");
-    Claims ->
-      Role = maps:get(<<"role">>, Claims, undefined),
-      Params = maps:get(params, Req, #{}),
-      case maps:get(<<"id">>, Params, undefined) of
-        undefined ->
-          response_utils:error(400, "No id provided");
-        IdBin when is_binary(IdBin) ->
-          case string:to_integer(binary_to_list(IdBin)) of
-            {IntId, []} when is_integer(IntId) ->
-              case Role of
-                undefined -> response_utils:error(401, "Unauthorized");
-                <<"administrator">> -> sql_delete_guestbook_entry(IntId);
-                <<"super-administrator">> -> sql_delete_guestbook_entry(IntId);
-                _ -> response_utils:error(401, "Unauthorized")
-              end;
-            _ -> response_utils:error(400, "Invalid id")
-          end
+  Params = maps:get(params, Req, #{}),
+  case maps:get(<<"id">>, Params, undefined) of
+    undefined ->
+      response_utils:error(400, "No id provided");
+    IdBin when is_binary(IdBin) ->
+      case string:to_integer(binary_to_list(IdBin)) of
+        {IntId, []} when is_integer(IntId) ->
+          case blog_middlewares:is_admin(Req) of
+            true -> sql_delete_guestbook_entry(IntId);
+            false -> response_utils:error(401, "Unauthorized")
+          end;
+        _ -> response_utils:error(400, "Invalid id")
       end
   end.
 
 -spec update_guestbook_entry(errm_http:request()) -> {ok, errm_http:response()}.
 update_guestbook_entry(Req) ->
-  case blog_middlewares:get_claims(Req) of
-    undefined -> response_utils:error(401, "Unauthorized");
-    Claims ->
-      Params = maps:get(params, Req, #{}),
-      Role = maps:get(<<"role">>, Claims, undefined),
-      case maps:get(<<"id">>, Params, undefined) of
-        undefined ->
-          response_utils:error(400, "No id provided");
-        IdBin when is_binary(IdBin) ->
-          case string:to_integer(binary_to_list(IdBin)) of
-            {IntId, []} when is_integer(IntId) -> 
-              case Role of
-                undefined -> response_utils:error(401, "Unauthorized");
-                <<"administrator">> -> handle_update(Req, IntId);
-                <<"super-administrator">> -> handle_update(Req, IntId);
-                _ -> response_utils:error(401, "Unauthorized")
-              end;
-            _ ->
-              response_utils:error(400, "Invalid id")
-          end
+  Params = maps:get(params, Req, #{}),
+  case maps:get(<<"id">>, Params, undefined) of
+    undefined ->
+      response_utils:error(400, "No id provided");
+    IdBin when is_binary(IdBin) ->
+      case string:to_integer(binary_to_list(IdBin)) of
+        {IntId, []} when is_integer(IntId) -> 
+          case blog_middlewares:is_admin(Req) of
+            true -> handle_update(Req, IntId);
+            false -> response_utils:error(401, "Unauthorized")
+          end;
+        _ ->
+          response_utils:error(400, "Invalid id")
       end
   end.
 
@@ -93,12 +79,13 @@ insert_guestbook_entry(Username, ContentMarkdown) ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
+      SanitizedContent = blog_filter:sanitize(ContentMarkdown, <<"guestbook">>),
       Now = erlang:system_time(second),
       Sql = "INSERT INTO guestbook_entries (username, content_markdown, posted_at) VALUES (?, ?, ?)",
-      case errm_sqlite:query(Db, Sql, [Username, ContentMarkdown, Now]) of
+      case errm_sqlite:query(Db, Sql, [Username, SanitizedContent, Now]) of
         {ok, _} ->
           {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
-          blog_ws_broadcast:guestbook(created, Username, ContentMarkdown, integer_to_binary(LastId), integer_to_binary(Now)),
+          blog_ws_broadcast:guestbook(created, Username, SanitizedContent, integer_to_binary(LastId), integer_to_binary(Now)),
           response_utils:ok(#{message => <<"Guestbook entry created successfully">>, id => LastId});
         {error, Reason1} ->
           logger:error("Error creating guestbook entry: ~p", [Reason1]),
@@ -116,7 +103,7 @@ sql_delete_guestbook_entry(EntryId) ->
       Params = [EntryId],
       case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
-          blog_ws_broadcast:guestbook(deleted, <<>>, <<>>, integer_to_binary(EntryId), <<>>),
+          blog_ws_broadcast:guestbook_delete(integer_to_binary(EntryId)),
           {ok, {204, #{}, <<>>}};
         {error, Reason1} ->
           logger:error("Error deleting guestbook entry: ~p", [Reason1]),
@@ -164,12 +151,13 @@ sql_update_guestbook_entry(EntryId, Username, ContentMarkdown) ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
+      SanitizedContent = blog_filter:sanitize(ContentMarkdown, <<"guestbook">>),
       Now = erlang:system_time(second),
       Sql = "UPDATE guestbook_entries SET content_markdown = ?, last_edited_at = ? WHERE id = ? AND username = ?",
-      Params = [ContentMarkdown, Now, EntryId, Username],
+      Params = [SanitizedContent, Now, EntryId, Username],
       case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
-          blog_ws_broadcast:guestbook(edited, Username, ContentMarkdown, integer_to_binary(EntryId), integer_to_binary(Now)),
+          blog_ws_broadcast:guestbook(edited, Username, SanitizedContent, integer_to_binary(EntryId), integer_to_binary(Now)),
           response_utils:ok(#{message => <<"Guestbook entry updated successfully">>, id => EntryId});
         {error, Reason1} ->
           logger:error("Error updating guestbook entry: ~p", [Reason1]),

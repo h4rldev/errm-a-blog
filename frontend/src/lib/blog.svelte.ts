@@ -25,8 +25,8 @@ export const blog = {
 			const data = await blog_api.get_me();
 			user = data;
 		} catch (e) {
-			console.error(e || "Failed to get user");
-			user = null;
+      user = null;
+      console.error(e || "Failed to get user");
 		} finally {
 			loading = false;
 		}

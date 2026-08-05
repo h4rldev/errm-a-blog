@@ -26,7 +26,18 @@ handle_text(Data, State = #{ws_state := #{user_id := UserId}, channels := Channe
           {ok, State};
         {ok, Db} ->
           {ok, Rows} = errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, last_edited_at FROM guestbook_entries ORDER BY posted_at DESC"),
-          Payload = errm_json:to_binary(#{<<"event">> => <<"guestbook:initial">>, <<"entries">> => format_entries(Rows)}),
+          Payload = errm_json:to_binary(#{<<"event">> => <<"guestbook:initial">>, <<"entries">> => blog_format:format_entries(Rows)}),
+          errm_ws:send_text(self(), Payload),
+          {ok, State}
+      end;
+    {ok, #{<<"event">> := <<"fetch_post_comments">>, <<"post_id">> := PostId}} ->
+      case blog_db:db() of
+        {error, Reason} ->
+          logger:error("[ws]: Failed to fetch post comments: ~p", [Reason]),
+          {ok, State};
+        {ok, Db} ->
+          {ok, Rows} = errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, last_edited_at FROM post_comments WHERE post_id = ? ORDER BY posted_at DESC", [PostId]),
+          Payload = errm_json:to_binary(#{<<"event">> => <<"post_comments:initial">>, <<"comments">> => blog_format:format_comments(Rows)}),
           errm_ws:send_text(self(), Payload),
           {ok, State}
       end;
@@ -55,30 +66,3 @@ handle_pong(_Data, State) ->
 
 terminate(_Reason, _State) ->
   ok.
-
-
-
-format_entries(Rows) ->
-  [format_entry(Row) || Row <- Rows].
-
-format_entry(Row) ->
-  #{
-    <<"id">> => value_to_binary(maps:get("id", Row, undefined)),
-    <<"username">> => value_to_binary(maps:get("username", Row, undefined)),
-    <<"content_markdown">> => value_to_binary(maps:get("content_markdown", Row, undefined)),
-    <<"posted_at">> => maps:get("posted_at", Row, undefined),
-    <<"last_edited_at">> => maps:get("last_edited_at", Row, undefined)
-  }.
-
-value_to_binary(null) -> null;
-value_to_binary(undefined) -> null;
-value_to_binary(V) when is_list(V) ->
-  case is_string(V) of
-    true -> iolist_to_binary(V);
-    false -> V
-  end;
-value_to_binary(V) -> V.
-
-is_string([]) -> true;
-is_string([H|T]) when is_integer(H), H >= 0, H =< 255 -> is_string(T);
-is_string(_) -> false.

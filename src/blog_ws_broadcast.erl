@@ -1,6 +1,7 @@
 -module (blog_ws_broadcast).
 -export ([broadcast/2]).
--export ([guestbook/5, comment/6]).
+-export ([guestbook/5, guestbook_delete/1]).
+-export ([comment/6, comment_delete/2]).
 
 -type topic() :: created | edited | deleted.
 
@@ -24,10 +25,13 @@ guestbook(edited, Username, Content, Id, Time) ->
   Payload = #{<<"event">> => Action, <<"id">> => Id, <<"username">> => Username, <<"content_markdown">> => Content, <<"edited_at">> => Time},
   broadcast(<<"guestbook">>, errm_json:to_binary(Payload));
 guestbook(deleted, _Username, _Content, Id, _Time) ->
+  guestbook_delete(Id).
+
+-spec guestbook_delete(Id :: binary()) -> ok.
+guestbook_delete(Id) ->
   Action = <<"guestbook:deleted">>,
   Payload = #{<<"event">> => Action, <<"id">> => Id},
   broadcast(<<"guestbook">>, errm_json:to_binary(Payload)).
-
 
 -spec comment(Topic :: topic(), Username :: binary(), Content :: binary(), Id :: binary(), PostId :: binary(), Time :: binary()) -> ok.
 comment(created, Username, Content, Id, PostId, Time) ->
@@ -41,9 +45,12 @@ comment(edited, Username, Content, Id, PostId, Time) ->
   Channel = <<"post_", PostId/binary>>,
   broadcast(Channel, errm_json:to_binary(Payload));
 comment(deleted, _Username, _Content, Id, PostId, _Time) ->
+  comment_delete(Id, PostId).
+
+-spec comment_delete(Id :: binary(), PostId :: binary()) -> ok.
+comment_delete(Id, PostId) ->
   Action = <<"post_comments:deleted">>,
   Payload = #{<<"event">> => Action, <<"id">> => Id},
   Channel = <<"post_", PostId/binary>>,
   broadcast(Channel, errm_json:to_binary(Payload)).
-
 

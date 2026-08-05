@@ -1,24 +1,19 @@
 <script lang="ts">
-import { onMount } from "svelte";
-import Markdown from "svelte-exmarkdown";
+import { onMount, onDestroy } from "svelte";
+import { blog_api, type GuestbookEntry } from "$lib/blog_api";
+
+import RichMarkdown from "$components/RichMarkdown.svelte";
 import Cell from "$components/Cell.svelte";
 import Heading from "$components/Heading.svelte";
 import Link from "$components/Link.svelte";
-import { blog_api } from "$lib/blog_api";
 
-interface Entry {
-	id: number;
-	username: string | "anonymous";
-	content_markdown: string;
-	posted_at: number;
-	edited_at: number | null;
-}
-
-let entries = $state<Entry[]>([]);
+let entries = $state<GuestbookEntry[]>([]);
 let ws = $state<WebSocket | null>(null);
 let username = $state<string | null>(null);
 let content = $state<string | null>(null);
 let loading = $state<boolean>(false);
+let error = $state<string | null>(null);
+let timeout_id = $state<number | null>(null);
 
 onMount(() => {
 	ws = new WebSocket("http://localhost:8080/ws");
@@ -26,46 +21,123 @@ onMount(() => {
 		ws.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
 		ws.send(JSON.stringify({ event: "fetch_guestbook" }));
 	};
+
 	ws.onmessage = (e) => {
 		const msg = JSON.parse(e.data);
-		if (msg.event === "guestbook:initial") entries = msg.entries;
-		else if (msg.event === "guestbook:new") entries = [...entries, msg];
-		else if (msg.event === "guestbook:edit")
-			entries = entries.map((entry) => (entry.id === msg.id ? msg : entry));
-		else if (msg.event === "guestbook:delete")
-			entries = entries.filter((entry) => entry.id !== msg.id);
-		else console.log("unknown event", msg);
+		switch (msg.event) {
+		  case "guestbook:initial":
+		    entries = msg.entries;
+		    break;
+      case "guestbook:new":
+        entries = [...entries, msg];
+        break;
+      case "guestbook:edit":
+        entries = entries.map((entry) => (entry.id === msg.id ? msg : entry));
+        break;
+      case "guestbook:delete":
+        entries = entries.filter((entry) => entry.id !== msg.id);
+        break;
+		  default:
+		    console.log("Unknown event:", msg);
+        break;
+		}
 	};
+
+  entries = entries.sort((a, b) => b.posted_at - a.posted_at);
+  timeout_id = setTimeout(() => {
+    ws.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
+    ws.send(JSON.stringify({ event: "fetch_guestbook" }));
+    entries = entries.sort((a, b) => b.posted_at - a.posted_at);
+  }, 30000);
 });
+
+onDestroy(() => {
+  clearTimeout(timeout_id);
+});
+
+
+const handle_submit = async (e: Event) => {
+  e.preventDefault();
+  
+  if (!username || !content) {
+    error = "Username, and content are required";
+    return;
+  }
+  
+  const payload = {
+    username: username.trim(),
+    content_markdown: content.trim(),
+  };
+
+  loading = true;
+  error = "";
+  try {
+    const data = await blog_api.create_guestbook_entry(payload);
+    console.log("data", data);
+  } catch (err: any) {
+    error = err.message || "Failed to create guestbook entry";
+  } finally {
+    loading = false;
+  }
+};
 </script>
 
 <main>
   <Cell title="guestbook">
     <Cell title="Add a new entry">
-      <Heading level="2">Add a new entry!</Heading>
-      <form onsubmit={handle_submit} class="guestbook-form">
-        <label class="username">
-          USERNAME
-          <input type="text" bind:value={username} autocomplete="username" placeholder="Anonymous" />
-        </label>
-        <label class="content">
-          CONTENT (MARKDOWN)
-          <textarea bind:value={content} placeholder="Write something..."></textarea>
-        </label>
-        <button type="submit" class="button-guestbook" disabled={loading}>
-          {loading ? 'Loading...' : 'Submit'}
-        </button>
-      </form>
+      <div class="form-container">
+        <Heading level="2">Add a new entry!</Heading>
+        <form onsubmit={handle_submit} class="guestbook-form">
+          <label class="username">
+            USERNAME
+            <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" />
+          </label>
+          <label class="content">
+            CONTENT (MARKDOWN)
+            <textarea bind:value={content} name="content" placeholder="Write something..."></textarea>
+          </label>
+          <button type="submit" class="button-guestbook" disabled={loading}>
+            {loading ? 'Loading...' : 'Submit'}
+          </button>
+        </form>
+      </div>
     </Cell>
-    
+
     <Cell title="Entries">
       {#each entries as entry}
-        <Cell title={ "from " + entry.username }>
-          <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(entry.posted_at)}</p>
-          <p class="text-xs">{entry.edited_at ? blog_api.convert_unix_timestamp_to_date(entry.last_edited_at) : "never"}</p>
-          <Markdown md={entry.content_markdown} />
+        <Cell title="Entry">
+          <div class="title-and-meta">
+            <p class="font-bold">{entry.username}</p>
+            <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(entry.posted_at)}</p>
+            <p class="text-xs">{entry.edited_at ? blog_api.convert_unix_timestamp_to_date(entry.last_edited_at) : "never"}</p>
+          </div>
+          <RichMarkdown md={entry.content_markdown} />
         </Cell>
       {/each}
     </Cell>
   </Cell>
 </main>
+
+<style>
+  @reference "$tailcss";
+
+  .title-and-meta {
+    @apply flex flex-row justify-between;
+  }
+
+  .form-container {
+    @apply flex flex-col justify-center items-center font-arimo mb-4;
+  }
+
+  .guestbook-form {
+    @apply flex flex-col gap-4 max-w-2xl w-xl;
+  }
+
+  input, textarea {
+    @apply bg-(--color-bg) text-(--color-text) p-2 w-full active:border-(--color-accent) active:outline-none active:ring-(--color-accent) focus:border-(--color-accent) focus:outline-none focus:ring-(--color-accent);
+  }
+
+  label {
+    @apply flex flex-col text-xs text-(--color-accent);
+  }
+</style>
