@@ -160,7 +160,6 @@ fetch_posts(Db, Amount) ->
     {ok, []} ->
       response_utils:ok(#{message => "No posts available"});
     {ok, Rows} ->
-      logger:debug("Rows: ~p", [Rows]),
       Posts = [blog_format:format_post(Row) || Row <- Rows],
       Response = #{
         <<"amount">> => length(Posts),

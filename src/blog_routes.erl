@@ -12,6 +12,10 @@ get() ->
     {put, ["api", "post", ":id"], fun posts_api:update_post/1},
     {delete, ["api", "post", ":id"], fun posts_api:delete_post/1},
 
+    {get, ["api", "admin", "stats"], fun admin_api:get_stats/1},
+    {get, ["api", "admin", "register_token"], fun admin_api:get_register_token/1},
+    {post, ["api", "admin", "rotate", ":secret"], fun admin_api:rotate/1},
+
     {post, ["api", "post", ":post_id", "comments"], fun comments_api:create_comment/1},
     {put, ["api", "post", ":post_id", "comments", ":comment_id"], fun comments_api:edit_comment/1},
     {delete, ["api", "post", ":post_id", "comments", ":comment_id"], fun comments_api:delete_comment/1},

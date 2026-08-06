@@ -27,6 +27,11 @@ let content = $state<string | null>(null);
 
 let slug = $derived(page.params.slug);
 
+const is_dev = import.meta.env.DEV;
+const is_prod = import.meta.env.PROD;
+const url = is_dev ? "http://localhost:8080" : is_prod ? "" : "http://localhost:8080";
+const full_url = url + "/ws";
+
 const load_post = async () => {
 	loading = true;
 	error = null;
@@ -44,7 +49,7 @@ const load_post = async () => {
 const handle_submit = async (e: Event) => {
   e.preventDefault();
 
-  if (content) {
+  if (content === null || content === "") {
     error = "Content is required";
     return;
   };
@@ -73,34 +78,46 @@ const handle_submit = async (e: Event) => {
 
 onMount(() => {
 	blog.check();
-  load_post();
 
-  ws = new WebSocket("http://localhost:8080/ws");  
+  ws = new WebSocket(full_url);
   ws.onopen = () => {
     ws.send(JSON.stringify({ event: "subscribe", channel: "post_" + post?.id }));
     ws.send(JSON.stringify({ event: "fetch_post_comments", post_id: post?.id }));
   };
   ws.onmessage = (e) => {
     const msg = JSON.parse(e.data);
-    if (msg.event === "post_comments:initial") comments = msg.comments;
-    else if (msg.event === "post_comments:new") comments = [...comments, msg];
-    else if (msg.event === "post_comments:edit")
-      comments = comments.map((comment) => (comment.id === msg.id ? msg : comment));
-    else if (msg.event === "post_comments:delete")
-      comments = comments.filter((comment) => comment.id !== msg.id);
-    else console.log("unknown event", msg);
+    switch (msg.event) {
+      case "post_comments:initial":
+        comments = msg.comments;
+        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+        break;
+      case "post_comments:new":
+        comments = [...comments, msg];
+        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+        break;
+      case "post_comments:edited":
+        comments = comments.map((comment) => (comment.id === msg.id ? msg : comment));
+        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+        break;
+      case "post_comments:deleted":
+        comments = comments.filter((comment) => comment.id !== msg.id);
+        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+        break;
+      default:
+        console.log("Unknown event:", msg);
+        break;
+    }
   };
-  comments = comments.sort((a, b) => b.posted_at - a.posted_at);  
 
   timeout_id = setTimeout(() => {
     ws.send(JSON.stringify({ event: "subscribe", channel: "post_" + post?.id }));
     ws.send(JSON.stringify({ event: "fetch_post_comments", post_id: post?.id }));
-    comments = comments.sort((a, b) => b.posted_at - a.posted_at);
   }, 30000);
 });
 
 onDestroy(() => {
   clearTimeout(timeout_id);
+  ws.close();
 });
 
 $effect(() => {
@@ -123,7 +140,7 @@ const delete_post = async () => {
 const can_modify = (): boolean => {
 	if (!blog.loading && !blog.is_logged_in) return false;
 	if (post?.slug !== slug && post?.id.toString() !== slug) return false;
-	if (post?.author.uuid !== blog.user?.uuid || !blog.user?.role.includes("admin")) return false;
+	if (post?.author.uuid !== blog.user?.uuid && !blog.user?.role.includes("admin")) return false;
 	return true;
 };
 </script>
@@ -169,7 +186,7 @@ const can_modify = (): boolean => {
             </label>
             <label class="content">
               CONTENT (MARKDOWN)
-              <textarea bind:value={content} name="content" placeholder="Write something..."></textarea>
+              <textarea bind:value={content} name="content" required placeholder="Write something..."></textarea>
             </label>
             <button type="submit" class="button-guestbook" disabled={loading}>
               {loading ? 'Loading...' : 'Submit'}

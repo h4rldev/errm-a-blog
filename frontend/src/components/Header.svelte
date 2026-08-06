@@ -1,6 +1,17 @@
-<script>
+<script lang="ts">
+import { onMount } from "svelte";
+import { blog } from "$lib/blog.svelte";
+
 import Link from "$components/Link.svelte";
 import ThemeToggle from "$components/ThemeToggle.svelte";
+
+const is_admin = $derived(
+	blog.user?.role === "administrator" || blog.user?.role === "super-administrator",
+);
+
+onMount(() => {
+	blog.check();
+});
 </script>
 
 <header>
@@ -23,6 +34,9 @@ import ThemeToggle from "$components/ThemeToggle.svelte";
           <li><Link href="/guestbook" target="_self">guestbook</Link></li>
           <li><Link href="/projects" target="_self">projects</Link></li>
           <li><Link href="/contact" target="_self">contact</Link></li>
+          {#if is_admin}
+          <li><Link href="/admin" target="_self">admin</Link></li>
+          {/if}
           <li><ThemeToggle /></li>
         </ul>
       </nav>

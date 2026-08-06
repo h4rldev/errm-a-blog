@@ -2,10 +2,7 @@
 -export ([get_all/1, add/1, delete/1]).
 
 -spec get_all(errm_http:request()) -> {ok, errm_http:response()}.
-get_all(Req) ->
-  Params = maps:get(params, Req, #{}),
-  Scope = maps:get(<<"scope">>, Params, undefined),
-
+get_all(#{params := #{<<"scope">> := Scope}}) ->
   case valid_scope(Scope) of
     true ->
       case blog_db:db() of
@@ -26,7 +23,9 @@ get_all(Req) ->
           end
       end;
     false -> response_utils:error(400, "Invalid scope")
-  end.
+  end;
+get_all(_Req) ->
+  response_utils:error(400, "Invalid scope").
 
 -spec add(errm_http:request()) -> {ok, errm_http:response()}.
 add(Req) ->

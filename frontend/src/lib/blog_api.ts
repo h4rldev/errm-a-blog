@@ -47,6 +47,22 @@ export interface Register {
 	register_token: string;
 }
 
+export interface Stats {
+  total_posts: number;
+  total_comments: number;
+  total_guestbook_entries: number;
+}
+
+export interface RegisterToken {
+  token: string;
+}
+
+export interface RotateRegisterToken {
+  message: string;
+  token: string;
+}
+
+
 const convert_unix_timestamp_to_date = (number: number): string => {
 	const date = new Date(number * 1000);
 	const now = new Date();
@@ -128,7 +144,20 @@ export const blog_api = {
   delete_comment: (id: number): Promise<void> =>
     request<void>(`/api/post/comment/${id}`, "DELETE"),
 
-  sleep: (ms: number) => 
+  get_admin_stats: () => 
+    request<Stats>("/api/admin/stats", "GET"),
+  get_register_token: () => 
+    request<RegisterToken>("/api/admin/register_token", "GET"),
+  admin_secret_rotate: (secret: string) => {
+    switch (secret) {
+      case "register_token":
+        return request<RotateRegisterToken>("/api/admin/rotate/register_token", "POST");
+      default:
+        return request<void>(`/api/admin/rotate/${secret}`, "POST");
+    }
+  },
+
+  sleep: (ms: number) =>
     new Promise((resolve) => setTimeout(resolve, ms)),
 
 	convert_unix_timestamp_to_date,

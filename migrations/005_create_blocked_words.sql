@@ -3,7 +3,7 @@ CREATE TABLE blocked_words (
   enforced_by TEXT NOT NULL,
   patterns TEXT NOT NULL DEFAULT '[]',
   keywords TEXT NOT NULL DEFAULT '[]',
-  updated_at INTEGER,
+  updated_at INTEGER
 );
 
 INSERT INTO blocked_words (scope) VALUES ('comments'), ('guestbook'), ('global')

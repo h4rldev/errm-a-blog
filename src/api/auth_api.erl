@@ -70,9 +70,6 @@ handle_registration(Username, Password, RegisterToken) ->
   case blog_secrets:get_super_admin_token() of
     {ok, Token} when Token =:= RegisterToken ->
       create_super_user(Username, Password);
-    {ok, _Token} ->
-      logger:error("Invalid super admin token"),
-      response_utils:error(400, "Invalid super admin token");
     _ ->
       logger:debug("Couldn't validate super admin token, registering manually"),
       case blog_secrets:get_register_token() of

@@ -13,7 +13,6 @@ let posts = $state<Post[]>([]);
 let total_posts = $state<number>(0);
 let loading = $state<boolean>(true);
 let error = $state<string | null>(null);
-let current_user = $state<User | null>(null);
 let show_modal = $state<boolean>(false);
 let show_edit_modal = $state<boolean>(false);
 let post_to_edit = $state<Post | null>(null);
@@ -67,12 +66,9 @@ const delete_post = async (post: Post) => {
 
 onMount(() => {
   blog.check();
+  load();
 });
 
-$effect(() => {
-	current_user = blog.user ? blog.user : null;
-	load();
-});
 </script>
 
 <main>
@@ -84,9 +80,9 @@ $effect(() => {
       <div class="actions">
         <ul>
           <li><button class="button-create-post" onclick={() => { show_modal = !show_modal; }}>New post</button></li>
-          {#if current_user}
+          {#if blog.user}
           <li class="flex flex-col justify-center">
-            <p class="text-(--color-accent)">Welcome {current_user.username}</p>
+            <p class="text-(--color-accent)">Welcome {blog.user.username}</p>
           </li>
           {/if}
           <li><button class="button-logout" onclick={blog.logout}>Logout</button></li>

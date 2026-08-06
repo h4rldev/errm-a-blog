@@ -15,8 +15,13 @@ let loading = $state<boolean>(false);
 let error = $state<string | null>(null);
 let timeout_id = $state<number | null>(null);
 
+const is_dev = import.meta.env.DEV;
+const is_prod = import.meta.env.PROD;
+const url = is_dev ? "http://localhost:8080" : is_prod ? "" : "http://localhost:8080";
+const full_url = url + "/ws";
+
 onMount(() => {
-	ws = new WebSocket("http://localhost:8080/ws");
+	ws = new WebSocket(full_url);
 	ws.onopen = () => {
 		ws.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
 		ws.send(JSON.stringify({ event: "fetch_guestbook" }));
@@ -27,27 +32,30 @@ onMount(() => {
 		switch (msg.event) {
 		  case "guestbook:initial":
 		    entries = msg.entries;
+        entries = entries.sort((a, b) => b.posted_at - a.posted_at);
 		    break;
       case "guestbook:new":
         entries = [...entries, msg];
+        entries = entries.sort((a, b) => b.posted_at - a.posted_at);
         break;
       case "guestbook:edit":
         entries = entries.map((entry) => (entry.id === msg.id ? msg : entry));
+        entries = entries.sort((a, b) => b.posted_at - a.posted_at);
         break;
       case "guestbook:delete":
         entries = entries.filter((entry) => entry.id !== msg.id);
+        entries = entries.sort((a, b) => b.posted_at - a.posted_at);
         break;
 		  default:
 		    console.log("Unknown event:", msg);
+        entries = entries.sort((a, b) => b.posted_at - a.posted_at);
         break;
 		}
 	};
 
-  entries = entries.sort((a, b) => b.posted_at - a.posted_at);
   timeout_id = setTimeout(() => {
     ws.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
     ws.send(JSON.stringify({ event: "fetch_guestbook" }));
-    entries = entries.sort((a, b) => b.posted_at - a.posted_at);
   }, 30000);
 });
 

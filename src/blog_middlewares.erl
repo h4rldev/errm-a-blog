@@ -1,5 +1,5 @@
 -module(blog_middlewares).
--export([get/0, auth_middleware/2, get_user_id/1, get_claims/1, authenticate/1, is_super_admin/1, is_admin/1]).
+-export([get/0, auth_middleware/3, get_user_id/1, get_claims/1, authenticate/1, is_super_admin/1, is_admin/1]).
 
 get() ->
   CompressionConfig = #{
@@ -25,8 +25,12 @@ get() ->
   }),
 
   ProtectedPrefixes = [
-    ["api"],
-    ["admin"]
+    ["api"]
+  ],
+
+  RoleProtectedPrefixes = [
+    {[<<"admin">>], [<<"administrator">>, <<"super-administrator">>]},
+    {[<<"api">>, <<"admin">>], [<<"administrator">>, <<"super-administrator">>]}
   ],
 
   PublicRoutes = [
@@ -46,36 +50,50 @@ get() ->
    errm_http_compress:compress(CompressionConfig),
    CORS,
    errm_http_cookie:with_cookies(),
-   auth_middleware(ProtectedPrefixes, PublicRoutes),
+   auth_middleware(ProtectedPrefixes, RoleProtectedPrefixes, PublicRoutes),
    errm_http_compress:decompress(DecompressionConfig)
   ].
 
 
--spec auth_middleware([[binary() | string()]], [{errm_http:method(), [binary() | string() | atom()]}]) -> errm_http:middleware().
-auth_middleware(ProtectedPrefixes, PublicRoutes) ->
+-spec auth_middleware(ProtectedPrefixes :: [[binary() | string()]], RoleProtectedPrefixes :: [{[binary()], [binary()]}], PublicRoutes :: [{errm_http:method(), [binary() | string() | atom()]}]) -> errm_http:middleware().
+auth_middleware(ProtectedPrefixes, RoleProtectedPrefixes, PublicRoutes) ->
   NormalizedPrefixes = [normalize_prefix(P) || P <- ProtectedPrefixes],
   fun(Req, Next) ->
     Method = maps:get(method, Req, get),
     Path = maps:get(path, Req, <<"/">>),
     Segments = to_segments(Path),
-    case is_protected(Segments, NormalizedPrefixes) of
-      false ->
-        Next(Req);
-      true ->
-        case is_public_with_segments(Method, Segments, PublicRoutes) of
-          true ->
-            Next(Req);
+
+    case role_required(Segments, RoleProtectedPrefixes) of
+      {ok, AllowedRoles} ->
+        case authenticate(Req) of
+          {ok, UserId, Claims} ->
+            case lists:member(maps:get(<<"role">>, Claims, undefined), AllowedRoles) of
+              true -> Next(Req#{user_id => UserId, claims => Claims});
+              false -> response_utils:error(403, "Forbidden")
+            end;
+          {error, _Reason} ->
+            response_utils:error(401, "Unauthorized")
+        end;
+      none ->
+        case is_protected(Segments, NormalizedPrefixes) of
           false ->
-            case authenticate(Req) of
-              {ok, UserId, Claims} ->
-                Req1 = Req#{
-                  user_id => UserId,
-                  claims => Claims
-                },
-                Next(Req1);
-              {error, _Reason} ->
-                logger:error("Unauthorized: ~p", [_Reason]),
-                response_utils:error(401, "Unauthorized")
+            Next(Req);
+          true ->
+            case is_public_with_segments(Method, Segments, PublicRoutes) of
+              true ->
+                Next(Req);
+              false ->
+                case authenticate(Req) of
+                  {ok, UserId, Claims} ->
+                    Req1 = Req#{
+                      user_id => UserId,
+                      claims => Claims
+                    },
+                    Next(Req1);
+                  {error, _Reason} ->
+                    logger:error("Unauthorized: ~p", [_Reason]),
+                    response_utils:error(401, "Unauthorized")
+                end
             end
         end
     end
@@ -213,3 +231,10 @@ matches([H | T], [SH | ST]) when is_binary(H) ->
         true -> matches(T, ST);
         false -> false
     end.
+
+role_required(_Segments, []) -> none;
+role_required(Segments, [{Prefix, Roles} | Rest]) ->
+  case starts_with(Prefix, Segments) of
+    true -> {ok, Roles};
+    false -> role_required(Segments, Rest)
+  end.

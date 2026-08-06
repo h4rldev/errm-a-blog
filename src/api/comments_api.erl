@@ -5,15 +5,17 @@
 create_comment(Req) ->
   Params = maps:get(params, Req, #{}),
   PostId = maps:get(<<"post_id">>, Params, undefined),
+  logger:debug("PostId: ~p", [PostId]),
   case bin_to_int(PostId) of
-    {IntId, []} when is_integer(IntId) ->
+    IntId when is_integer(IntId) ->
       case validate_comment_request(Req) of
         {error, Status, Message} ->
           response_utils:error(Status, Message);
-        {ok, PostId, Username, ContentMarkdown} ->
+        {ok, Username, ContentMarkdown} ->
           insert_comment(IntId, Username, ContentMarkdown)
       end;
-    _ ->
+    I ->
+      logger:error("Invalid post id: ~p", [I]),
       response_utils:error(400, "Invalid post id")
   end.
 
@@ -30,9 +32,9 @@ delete_comment(Req) ->
     {CId, PId} when is_binary(CId), is_binary(PId) ->
       case {bin_to_int(CId), bin_to_int(PId)} of
         {{error, _},   {error, _}}                           -> response_utils:error(400, "Invalid post_id, and comment id");
-        {{error, _},   {IntPId, []}} when is_integer(IntPId) -> response_utils:error(400, "Invalid comment id");
+        {{error, _},   IntPId} when is_integer(IntPId) -> response_utils:error(400, "Invalid comment id");
         {{error, _},   _}                                    -> response_utils:error(400, "Invalid post id");
-        {{IntCId, []}, {IntPId, []}} when is_integer(IntCId), is_integer(IntPId) -> 
+        {IntCId, IntPId} when is_integer(IntCId), is_integer(IntPId) -> 
           case blog_middlewares:is_admin(Req) of
             true -> sql_delete_comment(IntPId, IntCId);
             false -> response_utils:error(401, "Unauthorized")
@@ -54,9 +56,9 @@ edit_comment(Req) ->
     {CId, PId} when is_binary(CId), is_binary(PId) ->
       case {bin_to_int(CId), bin_to_int(PId)} of
         {{error, _},   {error, _}}                           -> response_utils:error(400, "Invalid comment id, and post id");
-        {{error, _},   {IntPId, []}} when is_integer(IntPId) -> response_utils:error(400, "Invalid comment id");
+        {{error, _},   IntPId} when is_integer(IntPId) -> response_utils:error(400, "Invalid comment id");
         {{error, _},   _}                                    -> response_utils:error(400, "Invalid post id");
-        {{IntCId, []}, {IntPId, []}} when is_integer(IntCId), is_integer(IntPId) ->
+        {IntCId, IntPId} when is_integer(IntCId), is_integer(IntPId) ->
           case blog_middlewares:is_admin(Req) of
             true -> handle_update(Req, IntPId, IntCId);
             false -> response_utils:error(401, "Unauthorized")
@@ -70,7 +72,7 @@ validate_comment_request(Req) ->
     #{<<"content-type">> := <<"application/json">>} ->
       case maps:get(body, Req, <<>>) of
         <<>> -> {error, 400, "No body provided"};
-        Body -> 
+        Body ->
           case errm_json:decode(Body) of
             {ok, Data} when is_map(Data) ->
               Username = maps:get(<<"username">>, Data, undefined),
