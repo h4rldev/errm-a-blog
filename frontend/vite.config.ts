@@ -4,7 +4,7 @@ import tailwindcss from "@tailwindcss/vite";
 import { execSync } from "child_process";
 import { defineConfig } from "vite";
 
-const commitHash =
+const commitHash = (
   process.env.GIT_COMMIT_HASH ||
   (() => {
     try {
@@ -12,7 +12,8 @@ const commitHash =
     } catch {
       return "unknown";
     }
-  })();
+  })()
+).slice(0, 7);
 const repoUrl = "https://codeberg.org/h4rl/errm-A-blog";
 const commitLink = `${repoUrl}/commit/${commitHash}`;
 const commitTreeLink = `${repoUrl}/src/commit/${commitHash}`;

@@ -1,0 +1,12 @@
+services:
+  errm-a-blog:
+    image: ghcr.io/h4rldev/errm-a-blog:latest
+    container_name: errm-a-blog
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    volumes:
+      - errm-data:/app/data
+
+volumes:
+  errm-data:
