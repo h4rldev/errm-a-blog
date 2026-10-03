@@ -1,13 +1,13 @@
 <script>
-import Cell from "$components/Cell.svelte";
-import Link from "$components/Link.svelte";
+ import Cell from "$components/Cell.svelte";
+ import Link from "$components/Link.svelte";
 
-const current_year = new Date().getFullYear();
+ const current_year = new Date().getFullYear();
 
-// @ts-expect-error
-const commit_hash = __GIT_COMMIT_HASH__;
-// @ts-expect-error
-const repo_url = __REPO_URL__;
+ // @ts-expect-error
+ const commit_hash = __GIT_COMMIT_HASH__;
+ // @ts-expect-error
+ const repo_url = __REPO_URL__;
 </script>
 
 <footer>
@@ -22,19 +22,19 @@ const repo_url = __REPO_URL__;
 </footer>
 
 <style>
-  @reference '$tailcss';
+ @reference '$tailcss';
 
-  footer {
-    @apply relative;
-  }
+ footer {
+   @apply relative;
+ }
 
-  ul {
-    @apply flex flex-row text-(--color-text) justify-center flex-wrap;
-  }
+ ul {
+   @apply flex flex-row text-(--color-text) justify-center flex-wrap;
+ }
 
-  ul > *:not(:last-child)::after {
-    @apply mx-2 text-(--color-subtext-alt);
-    content: "|";
-  }
+ ul > *:not(:last-child)::after {
+   @apply mx-2 text-(--color-subtext-alt);
+   content: "|";
+ }
 
 </style>

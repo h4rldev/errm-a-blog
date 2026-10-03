@@ -4,6 +4,7 @@ CREATE TABLE users (
   username TEXT UNIQUE NOT NULL,
   password_hash TEXT NOT NULL,
   role TEXT CHECK(role IN ('poster', 'administrator', 'super-administrator')) NOT NULL,
+  auth_version INTEGER NOT NULL DEFAULT 1,
   created_at INTEGER DEFAULT (strftime('%s', 'now')),
   updated_at INTEGER /* Only updated on name or password change */
 );

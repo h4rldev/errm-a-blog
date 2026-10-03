@@ -7,39 +7,38 @@ let user = $state<User | null>(null);
 let loading = $state<boolean>(true);
 
 export const blog = {
-	get user() {
-		return user;
-	},
-	get is_logged_in() {
-		return !!user;
-	},
-	get loading() {
-		return loading;
-	},
+  get user() {
+    return user;
+  },
+  get is_logged_in() {
+    return !!user;
+  },
+  get loading() {
+    return loading;
+  },
 
-	async check() {
-		if (!browser) return;
-		loading = true;
+  async check() {
+    if (!browser) return;
+    loading = true;
 
-		try {
-			const data = await blog_api.get_me();
-			user = data;
-		} catch (e) {
+    try {
+      const data = await blog_api.get_me();
+      user = data;
+    } catch (e) {
       user = null;
-      console.error(e || "Failed to get user");
-		} finally {
-			loading = false;
-		}
-	},
+    } finally {
+      loading = false;
+    }
+  },
 
-	async login(username: string, password: string) {
-		await blog_api.login({ username, password });
-		await this.check();
-	},
+  async login(username: string, password: string) {
+    await blog_api.login({ username, password });
+    await this.check();
+  },
 
-	async logout() {
-		await blog_api.logout();
-		user = null;
-		goto("/blog/");
-	},
+  async logout() {
+    await blog_api.logout();
+    user = null;
+    goto("/blog/");
+  },
 };

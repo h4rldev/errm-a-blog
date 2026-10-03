@@ -36,7 +36,9 @@ delete_comment(Req) ->
         {{error, _},   _}                                    -> response_utils:error(400, "Invalid post id");
         {IntCId, IntPId} when is_integer(IntCId), is_integer(IntPId) -> 
           case blog_middlewares:is_admin(Req) of
-            true -> sql_delete_comment(IntPId, IntCId);
+            true -> 
+              {Username, Content} = blog_notifications:delete_identity(Req),
+              sql_delete_comment(IntPId, IntCId, Username, Content);
             false -> response_utils:error(401, "Unauthorized")
           end
       end
@@ -94,37 +96,11 @@ validate_comment_request(Req) ->
 
 
 handle_update(Req, PostId, CommentId) ->
-  case validate_update_body(Req) of
+  case validate_comment_request(Req) of
     {error, Status, Message} ->
       response_utils:error(Status, Message);
     {ok, Username, ContentMarkdown} ->
       sql_update_comment(PostId, Username, ContentMarkdown, CommentId)
-  end.
-
-
-validate_update_body(Req) ->
-  case maps:get(headers, Req, #{}) of
-    #{<<"content-type">> := <<"application/json">>} ->
-      case maps:get(body, Req, <<>>) of
-        <<>> -> {error, 400, "No body provided"};
-        Body ->
-          case errm_json:decode(Body) of
-            {ok, Data} when is_map(Data) ->
-              Username = maps:get(<<"username">>, Data, undefined),
-              ContentMarkdown = maps:get(<<"content_markdown">>, Data, undefined),
-              case {Username, ContentMarkdown} of
-                {undefined, _} -> {error, 400, "No title provided"};
-                {_, undefined} -> {error, 400, "No content provided"};
-                {U, C} when is_binary(U), is_binary(C) ->
-                  {ok, U, C};
-                _ -> {error, 400, "Invalid JSON fields"}
-              end;
-            {error, Reason} ->
-              logger:error("Error reading json: ~p", [Reason]),
-              {error, 400, "Invalid JSON"}
-          end
-      end;
-    _ -> {error, 400, "Invalid content type"}
   end.
 
 
@@ -144,6 +120,7 @@ insert_comment(PostId, Username, ContentMarkdown) ->
             {ok, _} ->
               {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
               blog_ws_broadcast:comment(created, Username, SanitizedContent, integer_to_binary(LastId), integer_to_binary(PostId), integer_to_binary(Now)),
+              blog_notifications:record(<<"comment">>, <<"created">>, Username, SanitizedContent, integer_to_binary(PostId), blog_notifications:comment_target(integer_to_binary(PostId), integer_to_binary(LastId))),
               response_utils:ok(#{message => <<"Comment created successfully">>, id => LastId});
             {error, Reason1} ->
               logger:error("Error creating comment: ~p", [Reason1]),
@@ -183,11 +160,12 @@ sql_update_comment(PostId, Username, ContentMarkdown, CommentId) ->
         {ok, Db} ->
           SanitizedContent = blog_filter:sanitize(ContentMarkdown, <<"comments">>),
           Now = erlang:system_time(second),
-          Sql = "UPDATE post_comments SET content_markdown = ?, last_edited_at = ? WHERE post_id = ? AND id = ? AND username = ?",
+          Sql = "UPDATE post_comments SET content_markdown = ?, edited_at = ? WHERE post_id = ? AND id = ? AND username = ?",
           Params = [SanitizedContent, Now, PostId, CommentId, Username],
           case errm_sqlite:query(Db, Sql, Params) of
             {ok, []} ->
               blog_ws_broadcast:comment(edited, Username, SanitizedContent, integer_to_binary(CommentId), integer_to_binary(PostId), integer_to_binary(Now)),
+              blog_notifications:record(<<"comment">>, <<"edited">>, Username, SanitizedContent, integer_to_binary(PostId), blog_notifications:comment_target(integer_to_binary(PostId), integer_to_binary(CommentId))),
               response_utils:ok(#{message => <<"Comment updated successfully">>, id => CommentId});
             {error, Reason1} ->
               logger:error("Error updating comment: ~p", [Reason1]),
@@ -199,7 +177,7 @@ sql_update_comment(PostId, Username, ContentMarkdown, CommentId) ->
   end.
 
 
-sql_delete_comment(PostId, CommentId) ->
+sql_delete_comment(PostId, CommentId, Username, Content) ->
   case sql_check_post_exists(PostId) of
     ok ->
       case blog_db:db() of
@@ -211,7 +189,8 @@ sql_delete_comment(PostId, CommentId) ->
           Params = [PostId, CommentId],
           case errm_sqlite:query(Db, Sql, Params) of
             {ok, []} ->
-              blog_ws_broadcast:comment_delete(integer_to_binary(CommentId), integer_to_binary(PostId)),
+              blog_ws_broadcast:comment_delete(integer_to_binary(CommentId), integer_to_binary(PostId), Username, Content),
+              blog_notifications:record(<<"comment">>, <<"deleted">>, Username, Content, integer_to_binary(PostId), blog_notifications:comment_target(integer_to_binary(PostId), integer_to_binary(CommentId))),
               {ok, {204, #{}, <<>>}};
             {error, Reason1} ->
               logger:error("Error deleting comment: ~p", [Reason1]),
@@ -225,8 +204,11 @@ sql_delete_comment(PostId, CommentId) ->
 
 
 bin_to_int(Bin) when is_binary(Bin) ->
-  binary_to_integer(Bin);
+  try binary_to_integer(Bin) catch error:badarg -> {error, invalid} end;
 bin_to_int(Int) when is_integer(Int) ->
     Int;
 bin_to_int(Str) when is_list(Str) ->
-  list_to_integer(Str).
+  try list_to_integer(Str) catch error:badarg -> {error, invalid} end;
+bin_to_int(_) ->
+  {error, invalid}.
+

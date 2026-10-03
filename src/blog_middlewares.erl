@@ -1,5 +1,5 @@
 -module(blog_middlewares).
--export([get/0, auth_middleware/3, get_user_id/1, get_claims/1, authenticate/1, is_super_admin/1, is_admin/1]).
+-export([get/0, auth_middleware/3, get_user_id/1, get_claims/1, authenticate/1, is_admin/1]).
 
 get() ->
   CompressionConfig = #{
@@ -99,18 +99,6 @@ auth_middleware(ProtectedPrefixes, RoleProtectedPrefixes, PublicRoutes) ->
     end
   end.
 
--spec is_super_admin(errm_http:request()) -> boolean().
-  is_super_admin(Req) ->
-    case get_claims(Req) of
-      undefined -> false;
-      Claims ->
-        case maps:get(<<"role">>, Claims, undefined) of
-          undefined -> false;
-          <<"super-administrator">> -> true;
-          _ -> false
-        end
-    end.
-
 -spec is_admin(errm_http:request()) -> boolean().
   is_admin(Req) ->
     case get_claims(Req) of
@@ -155,13 +143,27 @@ verify_jwt(Token, Secret) ->
     {ok, Claims} ->
       case maps:get(<<"sub">>, Claims, undefined) of
         undefined -> {error, missing_sub};
-        UserId -> 
-          logger:debug("JWT validated successfully, got user id ~p", [UserId]),
-          {ok, UserId, Claims}
+        UserId ->
+          case session_valid(UserId, maps:get(<<"ver">>, Claims, undefined)) of
+            true ->
+              logger:debug("JWT validated successfully, got user id ~p", [UserId]),
+              {ok, UserId, Claims};
+            false ->
+              {error, stale_session}
+          end
       end;
     {error, Reason} -> {error, {invalid_token, Reason}}
   end.
 
+session_valid(UserId, Ver) ->
+  case blog_db:db() of
+    {ok, Db} ->
+      case errm_sqlite:query(Db, "SELECT auth_version FROM users WHERE uuid = ? LIMIT 1", [UserId]) of
+        {ok, [Row]} -> maps:get("auth_version", Row) =:= Ver;
+        _ -> false
+      end;
+    {error, _} -> false
+  end.
 
 -spec is_protected([binary()], [[binary()]]) -> boolean().
 is_protected(_Segments, []) -> false;
@@ -222,15 +224,17 @@ normalize_segment(Seg) when is_atom(Seg) ->
 -spec matches([binary() | atom()], [binary()]) -> boolean().
 matches([], []) -> true;
 matches([], _) -> false;
-matches([':*' | _], _) -> true;
+matches([':*' | T], [_ | ST]) ->
+  matches(T, ST);
 matches([_ | _], []) -> false;
 matches([H | T], [_SH | ST]) when is_atom(H) ->
-    matches(T, ST);
+  matches(T, ST);
 matches([H | T], [SH | ST]) when is_binary(H) ->
-    case H =:= SH of
-        true -> matches(T, ST);
-        false -> false
-    end.
+  case H =:= SH of
+    true -> matches(T, ST);
+    false -> false
+  end.
+
 
 role_required(_Segments, []) -> none;
 role_required(Segments, [{Prefix, Roles} | Rest]) ->

@@ -1,98 +1,139 @@
-@import 'tailwindcss';
+@import "tailwindcss";
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
 @custom-variant dark (&:where(.dark, .dark *));
 @theme {
-  --breakpoint-xs: 25rem;
+    --breakpoint-xs: 25rem;
 
-  --font-arimo: "Arimo Nerd Font Propo", sans-serif;
-  --font-mono: "Maple Mono Nerd Font", monospace;
+    --font-arimo: "Arimo Nerd Font Propo", sans-serif;
+    --font-mono: "Maple Mono Nerd Font", monospace;
 
-  --latte-rosewater: rgb(220, 138, 120);
-  --latte-flamingo: rgb(221, 120, 120);
-  --latte-pink: rgb(234, 118, 203);
-  --latte-mauve: rgb(136, 57, 239);
-  --latte-red: rgb(210, 15, 57);
-  --latte-maroon: rgb(230, 69, 83);
-  --latte-peach: rgb(254, 100, 11);
-  --latte-yellow: rgb(223, 142, 29);
-  --latte-green: rgb(64, 160, 43);
-  --latte-teal: rgb(23, 146, 153);
-  --latte-sky: rgb(4, 165, 229);
-  --latte-sapphire: rgb(32, 159, 181);
-  --latte-blue:rgb(30, 102, 245);
-  --latte-lavender: rgb(114, 135, 253);
-  --latte-text: rgb(76, 79, 105);
-  --latte-subtext1: rgb(92, 95, 119);
-  --latte-subtext0: rgb(108, 111, 133);
-  --latte-overlay2: rgb(124, 127, 147);
-  --latte-overlay1: rgb(140, 143, 161);
-  --latte-overlay0: rgb(156, 159, 176);
-  --latte-surface2: rgb(172, 176, 190);
-  --latte-surface1: rgb(188, 192, 204);
-  --latte-surface0: rgb(204, 208, 218);
-  --latte-base: rgb(239, 241, 245);
-  --latte-mantle: rgb(230, 233, 239);
-  --latte-crust: rgb(220, 224, 232);
+    --latte-rosewater: rgb(220, 138, 120);
+    --latte-flamingo: rgb(221, 120, 120);
+    --latte-pink: rgb(234, 118, 203);
+    --latte-mauve: rgb(136, 57, 239);
+    --latte-red: rgb(210, 15, 57);
+    --latte-maroon: rgb(230, 69, 83);
+    --latte-peach: rgb(254, 100, 11);
+    --latte-yellow: rgb(223, 142, 29);
+    --latte-green: rgb(64, 160, 43);
+    --latte-teal: rgb(23, 146, 153);
+    --latte-sky: rgb(4, 165, 229);
+    --latte-sapphire: rgb(32, 159, 181);
+    --latte-blue: rgb(30, 102, 245);
+    --latte-lavender: rgb(114, 135, 253);
+    --latte-text: rgb(76, 79, 105);
+    --latte-subtext1: rgb(92, 95, 119);
+    --latte-subtext0: rgb(108, 111, 133);
+    --latte-overlay2: rgb(124, 127, 147);
+    --latte-overlay1: rgb(140, 143, 161);
+    --latte-overlay0: rgb(156, 159, 176);
+    --latte-surface2: rgb(172, 176, 190);
+    --latte-surface1: rgb(188, 192, 204);
+    --latte-surface0: rgb(204, 208, 218);
+    --latte-base: rgb(239, 241, 245);
+    --latte-mantle: rgb(230, 233, 239);
+    --latte-crust: rgb(220, 224, 232);
 
-
-  --mocha-rosewater: rgb(245, 224, 220);
-  --mocha-flamingo: rgb(242, 205, 205);
-  --mocha-pink: rgb(245, 194, 231);
-  --mocha-mauve: rgb(203, 166, 247);
-  --mocha-red: rgb(243, 139, 168);
-  --mocha-maroon: rgb(235, 160, 172);
-  --mocha-peach: rgb(250, 179, 135);
-  --mocha-yellow: rgb(249, 226, 175);
-  --mocha-green: rgb(166, 227, 161);
-  --mocha-teal: rgb(148, 226, 213);
-  --mocha-sky: rgb(137, 220, 235);
-  --mocha-sapphire: rgb(116, 199, 236);
-  --mocha-blue: rgb(137, 180, 250);
-  --mocha-lavender: rgb(180, 190, 254);
-  --mocha-text: rgb(205, 214, 244);
-  --mocha-subtext1: rgb(186, 194, 222);
-  --mocha-subtext0: rgb(166, 173, 200);
-  --mocha-overlay2: rgb(147, 153, 178);
-  --mocha-overlay1: rgb(127, 132, 156);
-  --mocha-overlay0: rgb(108, 112, 134);
-  --mocha-surface2: rgb(88, 91, 112);
-  --mocha-surface1: rgb(69, 71, 90);
-  --mocha-surface0: rgb(49, 50, 68);
-  --mocha-base: rgb(30, 30, 46);
-  --mocha-mantle: rgb(24, 24, 37);
-  --mocha-crust: rgb(17, 17, 27);
+    --mocha-rosewater: rgb(245, 224, 220);
+    --mocha-flamingo: rgb(242, 205, 205);
+    --mocha-pink: rgb(245, 194, 231);
+    --mocha-mauve: rgb(203, 166, 247);
+    --mocha-red: rgb(243, 139, 168);
+    --mocha-maroon: rgb(235, 160, 172);
+    --mocha-peach: rgb(250, 179, 135);
+    --mocha-yellow: rgb(249, 226, 175);
+    --mocha-green: rgb(166, 227, 161);
+    --mocha-teal: rgb(148, 226, 213);
+    --mocha-sky: rgb(137, 220, 235);
+    --mocha-sapphire: rgb(116, 199, 236);
+    --mocha-blue: rgb(137, 180, 250);
+    --mocha-lavender: rgb(180, 190, 254);
+    --mocha-text: rgb(205, 214, 244);
+    --mocha-subtext1: rgb(186, 194, 222);
+    --mocha-subtext0: rgb(166, 173, 200);
+    --mocha-overlay2: rgb(147, 153, 178);
+    --mocha-overlay1: rgb(127, 132, 156);
+    --mocha-overlay0: rgb(108, 112, 134);
+    --mocha-surface2: rgb(88, 91, 112);
+    --mocha-surface1: rgb(69, 71, 90);
+    --mocha-surface0: rgb(49, 50, 68);
+    --mocha-base: rgb(30, 30, 46);
+    --mocha-mantle: rgb(24, 24, 37);
+    --mocha-crust: rgb(17, 17, 27);
 }
 
 :root {
-  --color-text: var(--latte-text);
-  --color-subtext: var(--latte-subtext1);
-  --color-subtext-alt: var(--latte-subtext0);
-  --color-link: var(--latte-blue);
-  --color-bg: var(--latte-crust);
-  --color-primary: var(--latte-base);
-  --color-secondary: var(--latte-mantle);
-  --color-accent: var(--latte-teal);
-  --color-surface: var(--latte-surface0);
-  --color-surface-secondary: var(--latte-surface1);
-  --color-overlay: var(--latte-overlay0);
-  --color-error: var(--latte-red);
-  --color-confirm: var(--latte-green);
+    --color-text: var(--latte-text);
+    --color-subtext: var(--latte-subtext1);
+    --color-subtext-alt: var(--latte-subtext0);
+    --color-link: var(--latte-blue);
+    --color-bg: var(--latte-crust);
+    --color-primary: var(--latte-base);
+    --color-secondary: var(--latte-mantle);
+    --color-accent: var(--latte-teal);
+    --color-surface: var(--latte-surface0);
+    --color-surface-secondary: var(--latte-surface1);
+    --color-overlay: var(--latte-overlay0);
+    --color-error: var(--latte-red);
+    --color-confirm: var(--latte-green);
 }
 
 .dark {
-  --color-text: var(--mocha-text);
-  --color-subtext: var(--mocha-subtext1);
-  --color-subtext-alt: var(--mocha-subtext0);
-  --color-bg: var(--mocha-crust);
-  --color-link: var(--mocha-blue);
-  --color-primary: var(--mocha-base);
-  --color-secondary: var(--mocha-mantle);
-  --color-accent: var(--mocha-teal);
-  --color-surface: var(--mocha-surface0);
-  --color-surface-secondary: var(--mocha-surface1);
-  --color-overlay: var(--mocha-overlay0);
-  --color-error: var(--mocha-red);
-  --color-confirm: var(--mocha-green);
+    --color-text: var(--mocha-text);
+    --color-subtext: var(--mocha-subtext1);
+    --color-subtext-alt: var(--mocha-subtext0);
+    --color-bg: var(--mocha-crust);
+    --color-link: var(--mocha-blue);
+    --color-primary: var(--mocha-base);
+    --color-secondary: var(--mocha-mantle);
+    --color-accent: var(--mocha-teal);
+    --color-surface: var(--mocha-surface0);
+    --color-surface-secondary: var(--mocha-surface1);
+    --color-overlay: var(--mocha-overlay0);
+    --color-error: var(--mocha-red);
+    --color-confirm: var(--mocha-green);
+    color-scheme: dark;
+}
+
+@layer components {
+    .post-actions {
+        @apply flex flex-row gap-2 z-50;
+    }
+    .button-edit {
+        @apply min-w-24 hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
+    }
+    .button-delete {
+        @apply min-w-24 hover:cursor-pointer bg-(--color-error) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
+    }
+    .button-guestbook {
+        @apply hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-2 px-4 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
+    }
+    .button-create-post {
+        @apply min-w-24 hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
+    }
+    .form-container {
+        @apply flex flex-col justify-center items-center font-arimo mb-4;
+    }
+    .guestbook-form {
+        @apply flex flex-col gap-4 max-w-2xl w-xl;
+    }
+    .title-and-meta {
+        @apply flex flex-row justify-between;
+    }
+    .login-form,
+    .register-form {
+        @apply flex flex-col gap-4 lg:w-1/3;
+    }
+    .auth-label {
+        @apply flex flex-col text-xs text-(--color-accent);
+    }
+    .auth-input {
+        @apply bg-(--color-bg) text-(--color-text) p-2 w-full active:border-(--color-accent) active:outline-none active:ring-(--color-accent) focus:border-(--color-accent) focus:outline-none focus:ring-(--color-accent);
+    }
+    .button-login,
+    .button-register {
+        @apply hover:cursor-pointer bg-(--color-accent) text-(--color-bg) font-bold py-2 px-4 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out;
+    }
 }

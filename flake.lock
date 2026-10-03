@@ -1,5 +1,25 @@
 {
   "nodes": {
+    "errm-argon": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790729260,
+        "narHash": "sha256-ex0OsB+UEWkfDm+TSQo/hcCVC6EO8CQyu8i6Nxu6XVU=",
+        "ref": "refs/heads/main",
+        "rev": "e93dadd237f424bfcd517ebde4360eceb091b7d8",
+        "revCount": 9,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-ARGON"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-ARGON"
+      }
+    },
     "errm-env": {
       "inputs": {
         "nixpkgs": [
@@ -7,11 +27,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784079551,
-        "narHash": "sha256-Vkvc5LbV0mXg3fmiZjlm4ji+4XKZ7tUiM8XKuy3AsV8=",
+        "lastModified": 1787877436,
+        "narHash": "sha256-tZt6xmk9kNVG+IV8IhRzsJVNLsuRVBhsPf72Kk48QuA=",
         "ref": "refs/heads/main",
-        "rev": "87244157afc19c7eaeade086743cbe7e57213609",
-        "revCount": 3,
+        "rev": "789620a673ed027194ec2f380ae06ad5fe271890",
+        "revCount": 4,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-ENV"
       },
@@ -27,11 +47,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784725073,
-        "narHash": "sha256-+wdVApa1DYrtADf1WPl0XsRnf9ABQmhavvhWY9Zxww8=",
+        "lastModified": 1790963925,
+        "narHash": "sha256-Wv81Xz3zNWrGTCuGoSoHVFaMN8gEcx4Hg3eRcZH2Uic=",
         "ref": "refs/heads/main",
-        "rev": "bba847b44a4422f6add61eff6e91570508ff057d",
-        "revCount": 32,
+        "rev": "797087bc709fa6a257d0ce333f7913692b1bde0a",
+        "revCount": 39,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-HTTP"
       },
@@ -47,11 +67,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784646585,
-        "narHash": "sha256-b71Iu6xLkVsZ+SNoDhBa1q2BfWOExIWu6h9QbzXBgLw=",
+        "lastModified": 1787877460,
+        "narHash": "sha256-W3PlQfY+SmGVOjj7YrZ/smvML6g/fLBa5iUQCUujvR8=",
         "ref": "refs/heads/main",
-        "rev": "8e144aebeeafb828188b9aa115d9061cac67ae5e",
-        "revCount": 10,
+        "rev": "ee2a76eec9ae773b01badbe09f8a2e3f50eecc69",
+        "revCount": 11,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-JSON"
       },
@@ -87,11 +107,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783865089,
-        "narHash": "sha256-a9chm6Jszupjqal8Wgh/u/5X0TdJgDUb+mKOPQU1L+A=",
+        "lastModified": 1787877526,
+        "narHash": "sha256-/J6RFgo80I2j6Ikr9E4WI7EiHUPtGwNXD7MlObMJ04w=",
         "ref": "refs/heads/main",
-        "rev": "123d7e56d7b927f9d6837a87d35785f34d4fa1b9",
-        "revCount": 3,
+        "rev": "1ec125319a845c5a3d53b3c3b592c78153e551c7",
+        "revCount": 4,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-JWT"
       },
@@ -107,11 +127,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1784373655,
-        "narHash": "sha256-H68wKS6ZKjuH6kZv14/knZt+P2vYU8QShcugnwR3SJc=",
+        "lastModified": 1790729377,
+        "narHash": "sha256-ovdvst8WTjaFXeUDG3RsvG7f+1lGzCHLeHpXbEro8lk=",
         "ref": "refs/heads/main",
-        "rev": "69f2d1b71fe2ab91767c01a8e87968c442ddc717",
-        "revCount": 24,
+        "rev": "42598c37a8745e9338611805ea64b413d3bd939b",
+        "revCount": 27,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-SQLite"
       },
@@ -145,11 +165,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1783665908,
-        "narHash": "sha256-WenE3Tp4itLDYW0/Zau+mHmFSv/2o9u1wHOxhHga/RU=",
+        "lastModified": 1787877556,
+        "narHash": "sha256-EiFUW8ZiGL5iZipQk4DxQLj9VxjNWMuCUzp45qtA4hA=",
         "ref": "refs/heads/main",
-        "rev": "d72b1e7702fe1dd5f9e31da3213fb09dc5726566",
-        "revCount": 3,
+        "rev": "a52440ccd6c8bb9c6b09d9db4d13071854589703",
+        "revCount": 4,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-UUID"
       },
@@ -165,11 +185,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1785360901,
-        "narHash": "sha256-l67mmJ9j7NAFKUQcmR6TUpBMagCw0GITgo5z1QKYHyw=",
+        "lastModified": 1787877567,
+        "narHash": "sha256-ByPHWUpfhm8m2zddwZxLH21TpMNMz3oWzfC/Ok4TVT4=",
         "ref": "refs/heads/main",
-        "rev": "cc4269adaec00c2cc7c2a04e524003e73d2fba19",
-        "revCount": 2,
+        "rev": "7148e4b8f81fe250b7d1d36c67a172b59162d547",
+        "revCount": 10,
         "type": "git",
         "url": "https://codeberg.org/h4rl/errm-WS"
       },
@@ -212,11 +232,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1784497964,
-        "narHash": "sha256-vlHUuqAcbcH2RKmHbPiuQzbv1pnzzavXnI62RD0bqCU=",
+        "lastModified": 1790822859,
+        "narHash": "sha256-69xHQhAeMAD2wDXO7T2pcOZIF9Sga2W+JkmY2a11Ops=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "241313f4e8e508cb9b13278c2b0fa25b9ca27163",
+        "rev": "c59305bab2065cfecc4944690d9eedbb56f3a9fa",
         "type": "github"
       },
       "original": {
@@ -228,6 +248,7 @@
     },
     "root": {
       "inputs": {
+        "errm-argon": "errm-argon",
         "errm-env": "errm-env",
         "errm-http": "errm-http",
         "errm-json": "errm-json",

@@ -1,9 +1,11 @@
 <script>
-import Cell from "$components/Cell.svelte";
-import Heading from "$components/Heading.svelte";
-import Link from "$components/Link.svelte";
+ import Cell from "$components/Cell.svelte";
+ import Heading from "$components/Heading.svelte";
+ import Meta from "$components/Meta.svelte";
+ import Link from "$components/Link.svelte";
 </script>
 
+<Meta title="Contact" path="/contact/" />
 <main>
   <Cell title="contact">
     <Heading level="2">

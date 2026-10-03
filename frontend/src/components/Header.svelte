@@ -1,24 +1,23 @@
 <script lang="ts">
-import { onMount } from "svelte";
-import { blog } from "$lib/blog.svelte";
+ import { onMount } from "svelte";
+ import { blog } from "$lib/blog.svelte";
 
-import Link from "$components/Link.svelte";
-import ThemeToggle from "$components/ThemeToggle.svelte";
+ import Link from "$components/Link.svelte";
+ import ThemeToggle from "$components/ThemeToggle.svelte";
 
-const is_admin = $derived(
-	blog.user?.role === "administrator" || blog.user?.role === "super-administrator",
-);
+ const is_admin = $derived(
+   blog.user?.role === "administrator" || blog.user?.role === "super-administrator",
+ );
 
-onMount(() => {
-	blog.check();
-});
+ onMount(() => {
+   blog.check();
+ });
 </script>
 
 <header>
   <div class="header-container">
     <div class="me-ascii">
-      <p>
-.__        _____        .__
+      <p>.__        _____        .__
 |  |__    /  |  |_______|  |
 |  |  \  /   |  |\_  __ \  |
 |   Y  \/    ^   /|  | \/  |__
@@ -30,12 +29,12 @@ onMount(() => {
       <nav>
         <ul class="navigation">
           <li><Link href="/" target="_self" >home</Link></li>
-          <li><Link href="/blog" target="_self">blog</Link></li>
-          <li><Link href="/guestbook" target="_self">guestbook</Link></li>
-          <li><Link href="/projects" target="_self">projects</Link></li>
-          <li><Link href="/contact" target="_self">contact</Link></li>
+          <li><Link href="/blog/" target="_self">blog</Link></li>
+          <li><Link href="/guestbook/" target="_self">guestbook</Link></li>
+          <li><Link href="/projects/" target="_self">projects</Link></li>
+          <li><Link href="/contact/" target="_self">contact</Link></li>
           {#if is_admin}
-          <li><Link href="/admin" target="_self">admin</Link></li>
+            <li><Link href="/admin/" target="_self">admin</Link></li>
           {/if}
           <li><ThemeToggle /></li>
         </ul>
@@ -45,21 +44,21 @@ onMount(() => {
 </header>
 
 <style>
-@reference '$tailcss';
+ @reference '$tailcss';
 
-header {
-  @apply max-w-full flex flex-row items-center justify-center mt-8 text-base;
-}
+ header {
+   @apply max-w-full flex flex-row items-center justify-center mt-8 text-base;
+ }
 
-.header-container {
-  @apply lg:w-200 lg:max-w-200 md:w-180 md:max-w-180 xs:w-96 xs:max-w-96 w-82 max-w-82 flex flex-row items-end justify-between;
-}
+ .header-container {
+   @apply lg:w-200 lg:max-w-200 md:w-180 md:max-w-180 xs:w-96 xs:max-w-96 w-82 max-w-82 flex flex-row items-end justify-between;
+ }
 
-.navigation {
-  @apply flex md:flex-row flex-col md:gap-4 font-arimo xl:text-left text-right;
-}
+ .navigation {
+   @apply flex md:flex-row flex-col md:gap-4 font-arimo xl:text-left text-right;
+ }
 
-.me-ascii {
-  @apply whitespace-pre-wrap font-mono xl:text-sm text-xs;
-}
+ .me-ascii {
+   @apply whitespace-pre-wrap font-mono xl:text-sm text-xs;
+ }
 </style>

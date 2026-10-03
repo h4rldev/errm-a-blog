@@ -6,4 +6,4 @@ CREATE TABLE blocked_words (
   updated_at INTEGER
 );
 
-INSERT INTO blocked_words (scope) VALUES ('comments'), ('guestbook'), ('global')
+INSERT OR IGNORE INTO blocked_words (scope, enforced_by) VALUES ('comments','system'),('guestbook','system'),('global','system');

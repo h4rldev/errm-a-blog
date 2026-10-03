@@ -4,10 +4,10 @@ CREATE TABLE posts (
   title TEXT NOT NULL,
   summary TEXT,
   content_markdown TEXT NOT NULL,
-  author_id INTEGER NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
+  author_id TEXT NOT NULL REFERENCES users(uuid) ON DELETE CASCADE,
   tags TEXT NOT NULL DEFAULT '[]',
   posted_at INTEGER DEFAULT (strftime('%s', 'now')),
-  last_edited_at INTEGER
+  edited_at INTEGER
 );
 
 CREATE INDEX idx_posts_author ON posts(author_id);

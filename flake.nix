@@ -31,6 +31,10 @@
       url = "git+https://codeberg.org/h4rl/errm-WS";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    errm-argon = {
+      url = "git+https://codeberg.org/h4rl/errm-ARGON";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -43,6 +47,7 @@
     errm-env,
     errm-sqlite,
     errm-ws,
+    errm-argon,
   }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs {inherit system;};
@@ -55,6 +60,7 @@
       errm-env.packages.${system}.errm-env-debug
       errm-sqlite.packages.${system}.errm-sqlite-debug
       errm-ws.packages.${system}.errm-ws-debug
+      errm-argon.packages.${system}.errm-argon-debug
     ];
 
     errm-prod = beamPackages.buildRebar3 {
@@ -71,22 +77,25 @@
         errm-jwt.packages.${system}.default
         errm-sqlite.packages.${system}.default
         errm-ws.packages.${system}.default
+        errm-argon.packages.${system}.default
       ];
 
       nativeBuildInputs = with pkgs; [
-        pkg-config
+        pkg-config just
       ];
 
       buildInputs = with pkgs; [
         brotli
         file
-        just
         sqlite
       ];
 
       env = {
         REBAR_PROFILE = "prod";
         ERL_ROOT = "${beamPackages.erlang}/lib/erlang/";
+        dontUseJustBuild = "1";
+        dontUseJustInstall = "1";
+        dontUseJustCheck = "1";
       };
     };
 
@@ -103,22 +112,25 @@
         errm-env.packages.${system}.errm-env-debug
         errm-jwt.packages.${system}.errm-jwt-debug
         errm-sqlite.packages.${system}.errm-sqlite-debug
+        errm-argon.packages.${system}.errm-argon-debug
       ];
 
       nativeBuildInputs = with pkgs; [
-        pkg-config
+        pkg-config just
       ];
 
       buildInputs = with pkgs; [
         brotli
         file
-        just
         sqlite
       ];
 
       env = {
         REBAR_PROFILE = "debug";
         ERL_ROOT = "${beamPackages.erlang}/lib/erlang/";
+        dontUseJustBuild = "1";
+        dontUseJustInstall = "1";
+        dontUseJustCheck = "1";
       };
     };
   in {
@@ -129,7 +141,7 @@
     };
 
     devShells.${system} = {
-      backend = pkgs.mkShell {
+      default = pkgs.mkShell {
         name = "errm-a-blog-backend";
 
         buildInputs = [
@@ -140,21 +152,19 @@
           pkgs.sqlite
           pkgs.pkg-config
           pkgs.libargon2
+
+          pkgs.deno
+          pkgs.biome
         ];
 
         packages = with pkgs; [
           erlang-language-platform
           just
-          (writeShellScriptBin "switch-shell" ''
-            CONTENT=$(cat ./.env-choice)
-            if [[ "$CONTENT" == "backend" ]]; then
-              echo "Switching to frontend"
-              echo "frontend" > .env-choice
-            else
-              echo "Switching to backend"
-              echo "backend" > .env-choice
-            fi
-          '')
+          svelte-language-server
+          svelte-check
+          typescript-language-server
+          tailwindcss-language-server
+          watchexec
         ];
 
         shellHook = ''
@@ -167,33 +177,6 @@
             '')
             myDeps)}
         '';
-      };
-
-      frontend = pkgs.mkShell {
-        name = "errm-a-blog-frontend";
-
-        buildInputs = with pkgs; [
-          deno
-          biome
-        ];
-
-        packages = with pkgs; [
-          svelte-language-server
-          svelte-check
-          typescript-language-server
-          tailwindcss-language-server
-          watchexec
-          (writeShellScriptBin "switch-shell" ''
-            CONTENT=$(cat ./.env-choice)
-            if [[ "$CONTENT" == "backend" ]]; then
-              echo "Switching to frontend"
-              echo "frontend" > .env-choice
-            else
-              echo "Switching to backend"
-              echo "backend" > .env-choice
-            fi
-          '')
-        ];
       };
     };
   };

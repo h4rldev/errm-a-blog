@@ -12,7 +12,8 @@
         errm_uuid,
         errm_sqlite,
         errm_env,
-        errm_ws
+        errm_ws,
+        errm_argon
     ]},
     {env, []},
     {modules, []},

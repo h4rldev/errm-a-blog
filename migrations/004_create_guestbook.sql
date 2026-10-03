@@ -3,7 +3,7 @@ CREATE TABLE guestbook_entries (
   username TEXT NOT NULL,
   content_markdown TEXT NOT NULL,
   posted_at INTEGER DEFAULT (strftime('%s', 'now')),
-  last_edited_at INTEGER
+  edited_at INTEGER
 );
 
 CREATE INDEX idx_guestbook_entries_posted_at ON guestbook_entries(posted_at DESC);

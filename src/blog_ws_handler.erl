@@ -25,10 +25,15 @@ handle_text(Data, State = #{ws_state := #{user_id := UserId}, channels := Channe
           logger:error("[ws]: Failed to fetch guestbook: ~p", [Reason]),
           {ok, State};
         {ok, Db} ->
-          {ok, Rows} = errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, last_edited_at FROM guestbook_entries ORDER BY posted_at DESC"),
-          Payload = errm_json:to_binary(#{<<"event">> => <<"guestbook:initial">>, <<"entries">> => blog_format:format_entries(Rows)}),
-          errm_ws:send_text(self(), Payload),
-          {ok, State}
+          case errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, edited_at FROM guestbook_entries ORDER BY posted_at DESC") of
+            {ok, Rows} ->
+              Payload = errm_json:to_binary(#{<<"event">> => <<"guestbook:initial">>, <<"entries">> => blog_format:format_entries(Rows)}),
+              errm_ws:send_text(self(), Payload),
+              {ok, State};
+            {error, Reason1} ->
+              logger:error("[ws]: Failed to fetch initial guestbook event: ~p", [Reason1]),
+              {ok, State}
+          end
       end;
     {ok, #{<<"event">> := <<"fetch_post_comments">>, <<"post_id">> := PostId}} ->
       case blog_db:db() of
@@ -36,10 +41,15 @@ handle_text(Data, State = #{ws_state := #{user_id := UserId}, channels := Channe
           logger:error("[ws]: Failed to fetch post comments: ~p", [Reason]),
           {ok, State};
         {ok, Db} ->
-          {ok, Rows} = errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, last_edited_at FROM post_comments WHERE post_id = ? ORDER BY posted_at DESC", [PostId]),
-          Payload = errm_json:to_binary(#{<<"event">> => <<"post_comments:initial">>, <<"comments">> => blog_format:format_comments(Rows)}),
-          errm_ws:send_text(self(), Payload),
-          {ok, State}
+          case errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, edited_at FROM post_comments WHERE post_id = ? ORDER BY posted_at DESC", [PostId]) of
+            {ok, Rows} ->
+              Payload = errm_json:to_binary(#{<<"event">> => <<"post_comments:initial">>, <<"comments">> => blog_format:format_comments(Rows)}),
+              errm_ws:send_text(self(), Payload),
+              {ok, State};
+            {error, Reason1} ->
+              logger:error("[ws]: Failed to fetch post comments: ~p", [Reason1]),
+              {ok, State}
+          end
       end;
     {ok, #{<<"event">> := <<"subscribe_all">>}} ->
       pg:join(blog_ws_group, <<"all_posts">>, self()),

@@ -6,7 +6,7 @@ CREATE TABLE post_comments (
   username TEXT NOT NULL,
   content_markdown TEXT NOT NULL,
   posted_at INTEGER DEFAULT (strftime('%s', 'now')),
-  last_edited_at INTEGER
+  edited_at INTEGER
 );
 
 CREATE INDEX idx_post_comments_posted_at ON post_comments(posted_at DESC);

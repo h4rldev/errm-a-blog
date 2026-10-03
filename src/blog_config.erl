@@ -28,11 +28,15 @@ load() ->
           Ip = maps:get(<<"ip_address">>, Decoded, Defaults#config.ip_address),
           Port = maps:get(<<"port">>, Decoded, Defaults#config.port),
           PortInt = case Port of
-            _Port when is_integer(_Port) -> _Port
+            P when is_integer(P) -> P;
+            P when is_binary(P) ->
+              try binary_to_integer(P) catch error:badarg -> Defaults#config.port end;
+            _ -> Defaults#config.port
           end,
           LogAccess = maps:get(<<"log_access">>, Decoded, Defaults#config.log_access),
           LogAccessBool = case LogAccess of
-            LA when is_boolean(LA) -> LA
+            LA when is_boolean(LA) -> LA;
+            _ -> Defaults#config.log_access
           end,
           InternalLogLevel = maps:get(<<"internal_log_level">>, Decoded, Defaults#config.internal_log_level),
           DbPath = maps:get(<<"db_path">>, Decoded, Defaults#config.db_path),
@@ -46,8 +50,8 @@ load() ->
             db_path=json_to_string(DbPath),
             server_name=json_to_string(ServerName)
           };
-        {error, not_found} ->
-          logger:warning("Failed to decode config file: ~p, using defaults"),
+        {error, Reason} ->
+          logger:warning("Failed to decode config file: ~p, using defaults", [Reason]),
           Defaults
       end;
     {error, Reason1} ->
@@ -66,18 +70,13 @@ load() ->
 
 record_to_map(#config{} = Record) ->
   Fields = record_info(fields, config),
-  Values = case tl(tuple_to_list(Record)) of
-    Vals when is_list(Vals) -> Vals
-  end,
-  maps:from_list(lists:zip(Fields, Values)).
+  maps:from_list(lists:zip(Fields, tl(tuple_to_list(Record)))).
 
 
 get(Key) ->
   Config = case errm_http:get_secret(config) of
     {ok, Secret} when is_record(Secret, config) -> Secret;
-    WhatHappened ->
-      io:format("What happened: ~p~n", [WhatHappened]),
-      throw({error, config_not_found})
+    _ -> throw({error, config_not_found})
   end,
 
   case Key of
@@ -90,14 +89,16 @@ get(Key) ->
     _ -> undefined
   end.
 
--spec json_to_string(errm_json:json_term()) -> string().
-json_to_string(V) when is_binary(V) ->
-    binary_to_list(V);
+-spec json_to_string(term()) -> string().
+json_to_string(V) when is_binary(V) -> binary_to_list(V);
 json_to_string(V) when is_list(V) ->
-    ensure_string(V).   %% returns string()
+  case ensure_string(V) of
+    S when is_list(S) -> S
+  end;
+json_to_string(_) -> "".
 
 -spec ensure_string(list()) -> string().
 ensure_string([]) -> [];
 ensure_string([H|T]) when is_integer(H) ->
-    [H | ensure_string(T)];
+  [H | ensure_string(T)];
 ensure_string(_) -> error({not_a_string}).

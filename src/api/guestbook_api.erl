@@ -20,7 +20,9 @@ delete_guestbook_entry(Req) ->
       case string:to_integer(binary_to_list(IdBin)) of
         {IntId, []} when is_integer(IntId) ->
           case blog_middlewares:is_admin(Req) of
-            true -> sql_delete_guestbook_entry(IntId);
+            true -> 
+              {Username, Content} = blog_notifications:delete_identity(Req),
+              sql_delete_guestbook_entry(IntId, Username, Content);
             false -> response_utils:error(401, "Unauthorized")
           end;
         _ -> response_utils:error(400, "Invalid id")
@@ -86,6 +88,7 @@ insert_guestbook_entry(Username, ContentMarkdown) ->
         {ok, _} ->
           {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
           blog_ws_broadcast:guestbook(created, Username, SanitizedContent, integer_to_binary(LastId), integer_to_binary(Now)),
+          blog_notifications:record(<<"guestbook">>, <<"created">>, Username, SanitizedContent, integer_to_binary(LastId), blog_notifications:guestbook_target(integer_to_binary(LastId))),
           response_utils:ok(#{message => <<"Guestbook entry created successfully">>, id => LastId});
         {error, Reason1} ->
           logger:error("Error creating guestbook entry: ~p", [Reason1]),
@@ -93,7 +96,7 @@ insert_guestbook_entry(Username, ContentMarkdown) ->
       end
   end.
 
-sql_delete_guestbook_entry(EntryId) ->
+sql_delete_guestbook_entry(EntryId, Username, Content) ->
   case blog_db:db() of
     {error, Reason} ->
       logger:error("Database open failed: ~p", [Reason]),
@@ -103,7 +106,8 @@ sql_delete_guestbook_entry(EntryId) ->
       Params = [EntryId],
       case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
-          blog_ws_broadcast:guestbook_delete(integer_to_binary(EntryId)),
+          blog_ws_broadcast:guestbook_delete(integer_to_binary(EntryId), Username, Content),
+          blog_notifications:record(<<"guestbook">>, <<"deleted">>, Username, Content, EntryId, blog_notifications:guestbook_target(integer_to_binary(EntryId))),
           {ok, {204, #{}, <<>>}};
         {error, Reason1} ->
           logger:error("Error deleting guestbook entry: ~p", [Reason1]),
@@ -113,36 +117,11 @@ sql_delete_guestbook_entry(EntryId) ->
   end.
 
 handle_update(Req, EntryId) ->
-  case validate_update_body(Req) of
+  case validate_guestbook_entry_request(Req) of
     {error, Status, Message} ->
       response_utils:error(Status, Message);
-    {ok, Title, ContentMarkdown} ->
-      sql_update_guestbook_entry(EntryId, Title, ContentMarkdown)
-  end.
-
-validate_update_body(Req) ->
-  case maps:get(headers, Req, #{}) of
-    #{<<"content-type">> := <<"application/json">>} ->
-      case maps:get(body, Req, <<>>) of
-        <<>> -> {error, 400, "No body provided"};
-        Body ->
-          case errm_json:decode(Body) of
-            {ok, Data} when is_map(Data) ->
-              Username = maps:get(<<"username">>, Data, undefined),
-              ContentMarkdown = maps:get(<<"content_markdown">>, Data, undefined),
-              case {Username, ContentMarkdown} of
-                {undefined, _} -> {error, 400, "No title provided"};
-                {_, undefined} -> {error, 400, "No content provided"};
-                {U, C} when is_binary(U), is_binary(C) ->
-                  {ok, U, C};
-                _ -> {error, 400, "Invalid JSON fields"}
-              end;
-            {error, Reason} ->
-              logger:error("Error reading json: ~p", [Reason]),
-              {error, 400, "Invalid JSON"}
-          end
-      end;
-    _ -> {error, 400, "Invalid content type"}
+    {ok, Username, ContentMarkdown} ->
+      sql_update_guestbook_entry(EntryId, Username, ContentMarkdown)
   end.
 
 sql_update_guestbook_entry(EntryId, Username, ContentMarkdown) ->
@@ -153,11 +132,12 @@ sql_update_guestbook_entry(EntryId, Username, ContentMarkdown) ->
     {ok, Db} ->
       SanitizedContent = blog_filter:sanitize(ContentMarkdown, <<"guestbook">>),
       Now = erlang:system_time(second),
-      Sql = "UPDATE guestbook_entries SET content_markdown = ?, last_edited_at = ? WHERE id = ? AND username = ?",
+      Sql = "UPDATE guestbook_entries SET content_markdown = ?, edited_at = ? WHERE id = ? AND username = ?",
       Params = [SanitizedContent, Now, EntryId, Username],
       case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
           blog_ws_broadcast:guestbook(edited, Username, SanitizedContent, integer_to_binary(EntryId), integer_to_binary(Now)),
+          blog_notifications:record(<<"guestbook">>, <<"edited">>, Username, SanitizedContent, integer_to_binary(EntryId), blog_notifications:guestbook_target(integer_to_binary(EntryId))),
           response_utils:ok(#{message => <<"Guestbook entry updated successfully">>, id => EntryId});
         {error, Reason1} ->
           logger:error("Error updating guestbook entry: ~p", [Reason1]),

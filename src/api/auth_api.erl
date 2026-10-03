@@ -15,7 +15,7 @@ login(Req) ->
   case validate_login_request(Req) of
     {error, Status, Message} -> response_utils:error(Status, Message);
     {ok, Username, Password} ->
-      handle_login(Username, Password)
+      handle_login(Req, Username, Password)
   end.
 
 -spec logout(errm_http:request()) -> {ok, errm_http:response()}.
@@ -27,7 +27,7 @@ logout(Req) ->
         max_age => 0,
         path => <<"/">>,
         http_only => true,
-        secure => false,
+        secure => is_secure(Req),
         same_site => lax
       },
       Jar1 = errm_http_cookie_jar:put(Jar, <<"session">>, <<"">>, DeleteOpts),
@@ -85,6 +85,18 @@ handle_registration(Username, Password, RegisterToken) ->
   end.
 
 create_user(Username, Password) ->
+  insert_new_user(Username, Password, <<"poster">>).
+
+create_super_user(Username, Password) ->
+  case already_has_super_admin() of
+    true ->
+      logger:alert("Someone tried to create a super administrator when there's already one, reissue a new token ASAP."),
+      response_utils:error(400, "Only 1 Super Administrator allowed");
+    false ->
+      insert_new_user(Username, Password, <<"super-administrator">>)
+  end.
+
+insert_new_user(Username, Password, Role) ->
   case blog_db:db() of
     {error, Reason} ->
       logger:error("Error opening database: ~p", [Reason]),
@@ -96,32 +108,9 @@ create_user(Username, Password) ->
           response_utils:error(500, "Password processing error");
         {ok, Hash} ->
           Uuid = errm_uuid:to_string(errm_uuid:v7()),
-          insert_user(Db, Uuid, Username, Hash, <<"poster">>)
+          insert_user(Db, Uuid, Username, Hash, Role)
       end
   end.
-
-create_super_user(Username, Password) ->
-  case blog_db:db() of
-    {error, Reason} ->
-      logger:error("Error opening database: ~p", [Reason]),
-      response_utils:error(500, "Database error");
-    {ok, Db} ->
-      case errm_sqlite:query(Db, "SELECT * FROM users WHERE role = ? LIMIT 1", [<<"super-administrator">>]) of
-        {ok, _} ->
-          logger:alert("Someone tried to create a super administrator when there's already one, reissue a new token ASAP."),
-          response_utils:error(400, "Only 1 Super Administrator allowed");
-        {error, _} ->
-          case errm_argon:hash(Password, interactive) of
-            {error, Reason1} ->
-              logger:error("Error hashing password: ~p", [Reason1]),
-              response_utils:error(500, "Password processing error");
-            {ok, Hash} ->
-              Uuid = errm_uuid:to_string(errm_uuid:v7()),
-              insert_user(Db, Uuid, Username, Hash, <<"super-administrator">>)
-          end
-      end
-  end.
-
 
 insert_user(Db, Uuid, Username, Hash, Role) ->
   Sql = "INSERT INTO users (uuid, username, password_hash, role) VALUES ($1, $2, $3, $4)",
@@ -133,6 +122,16 @@ insert_user(Db, Uuid, Username, Hash, Role) ->
     {error, Reason} ->
       logger:error("Error creating account: ~p", [Reason]),
       response_utils:error(500, "Error creating account")
+  end.
+
+already_has_super_admin() ->
+  case blog_db:db() of
+    {ok, Db} ->
+      case errm_sqlite:query(Db, "SELECT 1 FROM users WHERE role = ? LIMIT 1", [<<"super-administrator">>]) of
+        {ok, [_|_]} -> true;
+        _ -> false
+      end;
+    {error, _} -> false
   end.
 
 validate_login_request(Req) ->
@@ -159,17 +158,17 @@ validate_login_request(Req) ->
     _ -> {error, 400, "Invalid content type"}
   end.
 
-handle_login(Username, Password) ->
+handle_login(Req, Username, Password) ->
   case blog_db:db() of
     {error, Reason} ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
-      fetch_user_hash(Db, Username, Password)
+      fetch_user_hash(Req, Db, Username, Password)
   end.
 
-fetch_user_hash(Db, Username, Password) ->
-  Sql = "SELECT uuid, password_hash, role FROM users WHERE username = ? LIMIT 1",
+fetch_user_hash(Req, Db, Username, Password) ->
+  Sql = "SELECT uuid, password_hash, role, auth_version FROM users WHERE username = ? LIMIT 1",
   case errm_sqlite:query(Db, Sql, [list_to_binary(Username)]) of
     {ok, []} ->
       response_utils:error(400, "User not found");
@@ -178,9 +177,10 @@ fetch_user_hash(Db, Username, Password) ->
       StoredHash = maps:get("password_hash", Row),
       StoredHash1 = list_to_binary(io_lib:format("~s", [StoredHash])),
       Role = maps:get("role", Row),
+      AuthVersion = maps:get("auth_version", Row),
       case errm_argon:verify(Password, StoredHash1) of
         true ->
-          issue_session_token(UserId, Role);
+          issue_session_token(Req, UserId, Role, AuthVersion);
         false ->
           response_utils:error(400, "Invalid credentials")
       end;
@@ -189,13 +189,13 @@ fetch_user_hash(Db, Username, Password) ->
       response_utils:error(500, "Database error")
   end.
 
-issue_session_token(UserId, Role) ->
-  Claims = #{<<"sub">> => UserId, <<"role">> => Role},
+issue_session_token(Req, UserId, Role, AuthVersion) ->
+  Claims = #{<<"sub">> => UserId, <<"role">> => Role, <<"ver">> => AuthVersion},
   case blog_secrets:get_jwt_secret() of
     {ok, Secret} when is_binary(Secret) ->
       case errm_jwt:sign(Claims, Secret, hs256, #{ttl => 86400 * 30}) of
         {ok, Token} ->
-          set_session_cookie(Token);
+          set_session_cookie(Req, Token);
         {error, Reason} ->
           logger:error("Error signing JWT: ~p", [Reason]),
           response_utils:error(500, "Temporary login error")
@@ -203,12 +203,12 @@ issue_session_token(UserId, Role) ->
     _ -> response_utils:error(500, "Temporary login error")
   end.
 
-set_session_cookie(Token) ->
+set_session_cookie(Req, Token) ->
   CookieName = <<"session">>,
   CookieOpts = #{
     path => <<"/">>,
     http_only => true,
-    secure => false,
+    secure => is_secure(Req),
     same_site => lax,
     max_age => 30 * 86400
   },
@@ -226,11 +226,13 @@ set_session_cookie(Token) ->
       response_utils:error(500, "Temporary login error")
   end.
 
+is_secure(Req) ->
+  maps:get(<<"x-forwarded-proto">>, maps:get(headers, Req, #{}), <<"http">>) =:= <<"https">>.
 
 get_from_json(Key, Data) ->
   KeyBin = list_to_binary(Key),
-  case maps:is_key(KeyBin, Data) of
-    true -> binary_to_list(maps:get(KeyBin, Data));
-    _ -> {error, missing_key}
+  case maps:get(KeyBin, Data, undefined) of
+    V when is_binary(V) -> binary_to_list(V);
+    _ -> undefined 
   end.
 

@@ -1,6 +1,6 @@
 -module (blog_format).
--export ([format_post/1, format_entries/1, format_comments/1, format_blocked_words/1]).
--export ([key_to_binary/1, value_to_binary/1, is_string/1]).
+-export ([format_post/1, format_entries/1, format_comments/1, format_blocked_words/1, format_notification/1]).
+-export ([value_to_binary/1, format_user/1]).
 
 -spec format_post(Post :: map()) -> FormattedPost :: map().
 format_post(Post) ->
@@ -62,7 +62,19 @@ format_entry(Entry) ->
     <<"username">> => value_to_binary(maps:get("username", Entry, undefined)),
     <<"content_markdown">> => value_to_binary(maps:get("content_markdown", Entry, undefined)),
     <<"posted_at">> => maps:get("posted_at", Entry, undefined),
-    <<"last_edited_at">> => maps:get("last_edited_at", Entry, undefined)
+    <<"edited_at">> => maps:get("edited_at", Entry, undefined)
+  }.
+
+format_notification(Row) ->
+  #{
+    <<"id">> => maps:get("id", Row, null),
+    <<"kind">> => blog_format:value_to_binary(maps:get("kind", Row, undefined)),
+    <<"action">> => blog_format:value_to_binary(maps:get("action", Row, undefined)),
+    <<"username">> => blog_format:value_to_binary(maps:get("username", Row, undefined)),
+    <<"content">> => blog_format:value_to_binary(maps:get("content", Row, undefined)),
+    <<"ref_id">> => blog_format:value_to_binary(maps:get("ref_id", Row, undefined)),
+    <<"target">> => blog_format:value_to_binary(maps:get("target", Row, undefined)),
+    <<"created_at">> => maps:get("created_at", Row, null)
   }.
 
 key_to_binary(Key) when is_atom(Key) -> atom_to_binary(Key, utf8);
@@ -82,3 +94,11 @@ value_to_binary(V) -> V.
 is_string([]) -> true;
 is_string([H|T]) when is_integer(H), H >= 0, H =< 255 -> is_string(T);
 is_string(_) -> false.
+
+-spec format_user(User :: map()) -> map().
+format_user(User) ->
+  #{
+    <<"uuid">> => value_to_binary(maps:get("uuid", User, undefined)),
+    <<"username">> => value_to_binary(maps:get("username", User, undefined)),
+    <<"role">> => value_to_binary(maps:get("role", User, undefined))
+  }.

@@ -1,209 +1,284 @@
 <script lang="ts">
-import { onMount, onDestroy } from "svelte";
-import { goto } from "$app/navigation";
-import { page } from "$app/state";
-import { blog } from "$lib/blog.svelte";
-import { blog_api, type Post, type Comment } from "$lib/blog_api";
-import type { HTMLAnchorAttributes } from "svelte/elements";
+ import { onDestroy, onMount } from "svelte";
+ import type { HTMLAnchorAttributes } from "svelte/elements";
+ import { goto } from "$app/navigation";
+ import { page } from "$app/state";
+ import Cell from "$components/Cell.svelte";
+ import PostModal from "$components/PostModal.svelte";
+ import Heading from "$components/Heading.svelte";
+ import Link from "$components/Link.svelte";
+ import RichMarkdown from "$components/RichMarkdown.svelte";
+ import { blog } from "$lib/blog.svelte";
+ import { blog_api, type Comment, type Post, ws_url, normalize_entry as normalize_comment } from "$lib/blog_api";
 
-import RichMarkdown from "$components/RichMarkdown.svelte";
-import Cell from "$components/Cell.svelte";
-import EditPostModal from "$components/EditPostModal.svelte";
-import Heading from "$components/Heading.svelte";
-import Link from "$components/Link.svelte";
+ let post = $state<Post | null>(null);
+ let loading = $state<boolean>(true);
+ let is_submitting = $state<boolean>(false);
+ let error = $state<string | null>(null);
+ let show_edit_modal = $state<boolean>(false);
+ let ws = $state<WebSocket | null>(null);
+ let comments = $state<Comment[]>([]);
+ let ws_open = $state<boolean>(false);
+ let subscribed_post_id: number | undefined = undefined;
 
+ let username = $state<string | undefined>(undefined);
+ let content = $state<string | undefined>(undefined);
 
-let post = $state<Post | null>(null);
-let loading = $state<boolean>(true);
-let is_submitting = $state<boolean>(false);
-let error = $state<string | null>(null);
-let show_edit_modal = $state<boolean>(false);
-let ws = $state<WebSocket | null>(null);
-let comments = $state<Comment[]>([]);
-let timeout_id = $state<number | null>(null);
+ let editing_comment_id = $state<number | undefined>(undefined);
+ let edited_content = $state<string>("");
 
-let username = $state<string | null>(null);
-let content = $state<string | null>(null);
+ const is_admin = $derived(blog.user?.role?.includes("admin") ?? false);
 
-let slug = $derived(page.params.slug);
+ const start_edit_comment = (comment: Comment) => {
+   editing_comment_id = comment.id;
+   edited_content = comment.content_markdown;
+ };
 
-const is_dev = import.meta.env.DEV;
-const is_prod = import.meta.env.PROD;
-const url = is_dev ? "http://localhost:8080" : is_prod ? "" : "http://localhost:8080";
-const full_url = url + "/ws";
+ const cancel_edit_comment = () => {
+   editing_comment_id = undefined;
+   edited_content = "";
+ };
 
-const load_post = async () => {
-	loading = true;
-	error = null;
+ const save_edit_comment = async (comment: Comment) => {
+   if (post?.id === undefined) return;
+   await blog_api.edit_comment(post.id, comment.id, {
+     username: comment.username,
+     content_markdown: edited_content,
+   });
+   cancel_edit_comment();
+ };
 
-	try {
-		post = await blog_api.get_post(slug);
-	} catch (e: any) {
-		error = e.message || "Failed to load post";
-		post = null;
-	} finally {
-		loading = false;
-	}
-};
+ const delete_comment = async (comment: Comment) => {
+   if (post?.id === undefined) return;
+   if (!confirm(`Delete comment by ${comment.username}?`)) return;
+   await blog_api.delete_comment(post.id, comment.id, {
+     username: comment.username,
+     content_markdown: comment.content_markdown,
+   });
+ };
 
-const handle_submit = async (e: Event) => {
-  e.preventDefault();
+ 
+ let slug = $derived(page.params.slug);
 
-  if (content === null || content === "") {
-    error = "Content is required";
-    return;
-  };
+ const load_post = async () => {
+   loading = true;
+   error = null;
 
-  if (post?.id === undefined) {
-    error = "Post is required";
-    return;
-  };
+   try {
+     post = await blog_api.get_post(slug);
+   } catch (e: any) {
+     error = e.message || "Failed to load post";
+     post = null;
+   } finally {
+     loading = false;
+   }
+ };
 
-  const payload = {
-    username: username.trim(),
-    content_markdown: content.trim(),
-  };
+ const handle_submit = async (e: Event) => {
+   e.preventDefault();
 
-  is_submitting = true;
-  error = "";
-  try {
-    await blog_api.create_comment(payload, post?.id);
-  } catch (err: any) {
-    error = err.message || "Failed to create comment";
-  } finally {
-    is_submitting = false;
-  }
-};
+   if (content === null || content === "") {
+     error = "Content is required";
+     return;
+   }
 
+   if (post?.id === undefined) {
+     error = "Post is required";
+     return;
+   }
 
-onMount(() => {
-	blog.check();
+   const payload = {
+     username: (username ?? "anonymous").trim(),
+     content_markdown: (content ?? "").trim(),
+   };
 
-  ws = new WebSocket(full_url);
-  ws.onopen = () => {
-    ws.send(JSON.stringify({ event: "subscribe", channel: "post_" + post?.id }));
-    ws.send(JSON.stringify({ event: "fetch_post_comments", post_id: post?.id }));
-  };
-  ws.onmessage = (e) => {
-    const msg = JSON.parse(e.data);
-    switch (msg.event) {
-      case "post_comments:initial":
-        comments = msg.comments;
-        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
-        break;
-      case "post_comments:new":
-        comments = [...comments, msg];
-        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
-        break;
-      case "post_comments:edited":
-        comments = comments.map((comment) => (comment.id === msg.id ? msg : comment));
-        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
-        break;
-      case "post_comments:deleted":
-        comments = comments.filter((comment) => comment.id !== msg.id);
-        comments = comments.sort((a, b) => b.posted_at - a.posted_at);
-        break;
-      default:
-        console.log("Unknown event:", msg);
-        break;
-    }
-  };
+   is_submitting = true;
+   error = "";
+   try {
+     await blog_api.create_comment(payload, post?.id);
+   } catch (err: any) {
+     error = err.message || "Failed to create comment";
+   } finally {
+     is_submitting = false;
+   }
+ };
 
-  timeout_id = setTimeout(() => {
-    ws.send(JSON.stringify({ event: "subscribe", channel: "post_" + post?.id }));
-    ws.send(JSON.stringify({ event: "fetch_post_comments", post_id: post?.id }));
-  }, 30000);
-});
+ onMount(() => {
+   blog.check();
 
-onDestroy(() => {
-  clearTimeout(timeout_id);
-  ws.close();
-});
+   ws = new WebSocket(ws_url);
+   ws!.onopen = () => {
+     ws_open = true;
+     subscribed_post_id = undefined;
+   };
 
-$effect(() => {
-	load_post();
-});
+   ws!.onclose = () => {
+     ws_open = false;
+   };
 
-const delete_post = async () => {
-	if (!post) return;
-	if (!blog.is_logged_in) {
-		goto("/login");
-		return;
-	}
+   ws!.onmessage = (e) => {
+     const msg = JSON.parse(e.data);
+     switch (msg.event) {
+       case "post_comments:initial":
+         comments = msg.comments.map(normalize_comment);
+         comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+         break;
+       case "post_comments:new":
+         comments = [...comments, normalize_comment(msg)];
+         comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+         break;
+       case "post_comments:edited":
+         comments = comments.map((comment) =>
+           comment.id === Number(msg.id) ? { ...comment, content_markdown: msg.content_markdown, edited_at: Number(msg.edited_at) } : comment,
+         );
+         break;
+       case "post_comments:deleted":
+         comments = comments.filter((comment) => comment.id !== Number(msg.id));
+         break;
+       default:
+         break;
+     }
+   };
+ });
 
-	if (!confirm(`Delete ${post.title} by ${post.author.username}?`)) return;
+ $effect(() => {
+   const id = post?.id;
+   if (!ws_open || !ws || id === undefined || subscribed_post_id === id) return;
+   subscribed_post_id = id;
+   ws.send(JSON.stringify({ event: "subscribe", channel: "post_" + id }));
+   ws.send(JSON.stringify({ event: "fetch_post_comments", post_id: id }));
+ });
+ 
+ onDestroy(() => {
+   ws?.close();
+ });
+ 
+ $effect(() => {
+   load_post();
+ });
 
-	await blog_api.delete_post(post.id);
-	goto("/blog");
-};
+ $effect(() => {
+   if (comments.length && location.hash.startsWith("#comment-"))
+     document.querySelector(location.hash)?.scrollIntoView();
+ });
+ 
+ const delete_post = async () => {
+   if (!post) return;
+   if (!blog.is_logged_in) {
+     goto("/login/");
+     return;
+   }
 
-const can_modify = (): boolean => {
-	if (!blog.loading && !blog.is_logged_in) return false;
-	if (post?.slug !== slug && post?.id.toString() !== slug) return false;
-	if (post?.author.uuid !== blog.user?.uuid && !blog.user?.role.includes("admin")) return false;
-	return true;
-};
+   if (!confirm(`Delete ${post.title} by ${post.author.username}?`)) return;
+
+   await blog_api.delete_post(post.id.toString());
+   goto("/blog/");
+ };
+
+ const can_modify = (): boolean => {
+   if (!blog.loading && !blog.is_logged_in) return false;
+   if (post?.slug !== slug && post?.id.toString() !== slug) return false;
+   if (
+     post?.author.uuid !== blog.user?.uuid &&
+     !blog.user?.role.includes("admin")
+   )
+     return false;
+   return true;
+ };
 </script>
 
 <main>
   <Cell title="Post">
-  {#if loading}
-    <p>Loading post...</p>
-  {:else if error}
-    <p class="text-(--color-danger)">{error}</p>
-  {:else if post}
-      <p class="absolute text-xs top-1"><Link href="/blog" target="_self">{`<-`} Back to blog</Link></p>
+    {#if loading}
+      <p>Loading post...</p>
+    {:else if error}
+      <p class="text-(--color-danger)">{error}</p>
+    {:else if post}
+      <p class="absolute text-xs top-1"><Link href="/blog/" target="_self">{`<-`} Back to blog</Link></p>
       <Cell title="metadata">
         <Heading level="1">{post.title}</Heading>
         <p class="">Slug: {post.slug}</p>
         <p class="">Summary: {post.summary}</p>
         <p> Tags: {post.tags.join(", ")} </p>
-        <p> Posted at: {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited at: {post.last_edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.last_edited_at)} </p>
+        <p> Posted at: {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited at: {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
       </Cell>
       <Cell title="Content">
-        <RichMarkdown render_images=true md={post.content_markdown} />
+        <RichMarkdown render_images={true} md={post.content_markdown} />
         {#if can_modify()}
           <div class="mt-4">
             <ul class="post-actions">
-              <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
+              <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; }}>Edit</button></li>
               <li><button class="button-delete" onclick={delete_post}>Delete</button></li>
             </ul>
           </div>
         {/if}
       </Cell>
-  {/if}
+    {/if}
   </Cell>
   {#if show_edit_modal}
-    <EditPostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_edit={() => { load_post(); }} post_id={post?.id} post_slug={post?.slug} />
-  {:else}
-    <Cell title="Comments">
-      <Cell title="Post A Comment">
-        <div class="form-container">
-          <form onsubmit={handle_submit} class="guestbook-form">
-            <label class="username">
-              USERNAME
-              <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" />
-            </label>
-            <label class="content">
-              CONTENT (MARKDOWN)
-              <textarea bind:value={content} name="content" required placeholder="Write something..."></textarea>
-            </label>
-            <button type="submit" class="button-guestbook" disabled={loading}>
-              {loading ? 'Loading...' : 'Submit'}
-            </button>
-          </form>
-        </div>
-      </Cell>
-      {#each comments as comment}
-        <Cell title="Comment">
-          <div class="title-and-meta">
-            <p class="font-bold">{comment.username}</p>
-            <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(comment.posted_at)}</p>
-            <p class="text-xs">{comment.edited_at ? blog_api.convert_unix_timestamp_to_date(comment.last_edited_at) : "never"}</p>
+    <PostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_saved={() => { load_post(); }} post_id={post?.id} post_slug={post?.slug} />
+  {:else if post}
+      <Cell title="Comments">
+        <Cell title="Post A Comment">
+          <div class="form-container">
+            <form onsubmit={handle_submit} class="guestbook-form">
+              <label class="username">
+                USERNAME
+                <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" />
+              </label>
+              <label class="content">
+                CONTENT (MARKDOWN)
+                <textarea bind:value={content} name="content" required placeholder="Write something..."></textarea>
+              </label>
+              <button type="submit" class="button-guestbook" disabled={is_submitting}>
+                {loading ? 'Loading...' : 'Submit'}
+              </button>
+            </form>
           </div>
-          <RichMarkdown md={comment.content_markdown} />
         </Cell>
-      {/each}
-    </Cell>
+        {#each comments as comment}
+          <div id={`comment-${comment.id}`}>
+            <Cell title="Comment">
+              <div class="title-and-meta">
+                <p class="font-bold">{comment.username}</p>
+                <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(comment.posted_at)}</p>
+                <p class="text-xs">{comment.edited_at ? blog_api.convert_unix_timestamp_to_date(comment.edited_at) : "never"}</p>
+              </div>
+              <RichMarkdown md={comment.content_markdown} />
+              {#if is_admin}
+                <div class="mt-4">
+                  <ul class="post-actions">
+                    <li><button class="button-edit" onclick={() => start_edit_comment(comment)}>Edit</button></li>
+                    <li><button class="button-delete" onclick={() => delete_comment(comment)}>Delete</button></li>
+                  </ul>
+                </div>
+              {/if}
+              {#if editing_comment_id === comment.id}
+                <form class="guestbook-form mt-4" onsubmit={(e) => { e.preventDefault(); save_edit_comment(comment); }}>
+                  <textarea bind:value={edited_content}></textarea>
+                  <div class="flex flex-row gap-2">
+                    <button type="submit" class="button-edit">Save</button>
+                    <button type="button" class="button-delete" onclick={cancel_edit_comment}>Cancel</button>
+                  </div>
+                </form>
+              {/if}
+            </Cell>
+          </div>
+        {/each}
+      </Cell>
   {/if}
 </main>
+
+<style>
+ @reference "$tailcss";
+
+ input,
+ textarea {
+   @apply bg-(--color-bg) text-(--color-text) p-2 w-full active:border-(--color-accent) active:outline-none active:ring-(--color-accent) focus:border-(--color-accent) focus:outline-none focus:ring-(--color-accent);
+ }
+
+ label {
+   @apply flex flex-col text-xs text-(--color-accent);
+ }
+
+</style>

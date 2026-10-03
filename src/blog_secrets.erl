@@ -27,45 +27,34 @@ get_jwt_secret() ->
   end.
 
 -spec get_register_token() -> {ok, term()} | {error, not_found}.
-get_register_token() ->
-  Now = erlang:system_time(second),
-  case errm_http:get_secret(register_token) of
-    {ok, {Token, Expiry}} when Expiry > Now ->
-      {ok, Token};
-    _ ->
-      generate_register_token(),
-      get_register_token()
-  end.
+get_register_token() -> get_token("REGISTER", register_token).
 
 -spec get_super_admin_token() -> {ok, term()} | {error, not_found}.
-get_super_admin_token() ->
+get_super_admin_token() -> get_token("SUPER_ADMIN", super_admin_token).
+
+
+get_token(Prefix, SecretKey) ->
   Now = erlang:system_time(second),
-  case errm_http:get_secret(super_admin_token) of
+  case errm_http:get_secret(SecretKey) of
     {ok, {Token, Expiry}} when Expiry > Now ->
       {ok, Token};
     _ ->
-      generate_super_admin_token(),
-      get_super_admin_token()
+      generate_token(Prefix, SecretKey),
+      get_token(Prefix, SecretKey)
   end.
 
-get_valid_register_token() ->
-  Now = erlang:system_time(second),
-  case token_and_expiry("REGISTER_TOKEN", "REGISTER_TOKEN_EXPIRY") of
-    {ok, Token, Expiry} when Expiry > Now ->
-      errm_http:set_secret(register_token, {Token, Expiry}),
-      ok;
-    _ ->
-      generate_register_token()
-  end.
+get_valid_register_token() -> get_valid_token("REGISTER", register_token).
 
-get_valid_super_admin_token() ->
+get_valid_super_admin_token() -> get_valid_token("SUPER_ADMIN", super_admin_token).
+
+get_valid_token(Prefix, SecretKey) ->
   Now = erlang:system_time(second),
-  case token_and_expiry("SUPER_ADMIN_TOKEN", "SUPER_ADMIN_TOKEN_EXPIRY") of
+  case token_and_expiry(Prefix ++ "_TOKEN", Prefix ++ "_TOKEN_EXPIRY") of
     {ok, Token, Expiry} when Expiry > Now ->
-      errm_http:set_secret(super_admin_token, {Token, Expiry}),
+      errm_http:set_secret(SecretKey, {Token, Expiry}),
       ok;
     _ ->
-      generate_super_admin_token()
+      generate_token(Prefix, SecretKey)
   end.
 
 -spec get_or_gen(nonempty_string()) -> ok.
@@ -105,26 +94,14 @@ gen_cookie_secret() ->
   errm_http:set_secret(cookie_key, Secret),
   ok.
 
-generate_register_token() ->
-  TokenBin = base64:encode(crypto:strong_rand_bytes(24), #{mode => urlsafe, padding => false}),
-  Token = binary_to_list(TokenBin),
+generate_register_token() -> generate_token("REGISTER", register_token).
 
+generate_token(Prefix, SecretKey) ->
+  Token = binary_to_list(base64:encode(crypto:strong_rand_bytes(24), #{mode => urlsafe, padding => false})),
   Expiry = erlang:system_time(second) + 86400,
-
-  set_env_var("REGISTER_TOKEN", Token),
-  set_env_var("REGISTER_TOKEN_EXPIRY", integer_to_list(Expiry)),
-  errm_http:set_secret(register_token, {Token, Expiry}),
-  ok.
-
-generate_super_admin_token() ->
-  TokenBin = base64:encode(crypto:strong_rand_bytes(24), #{mode => urlsafe, padding => false}),
-  Token = binary_to_list(TokenBin),
-
-  Expiry = erlang:system_time(second) + 86400,
-
-  set_env_var("SUPER_ADMIN_TOKEN", Token),
-  set_env_var("SUPER_ADMIN_TOKEN_EXPIRY", integer_to_list(Expiry)),
-  errm_http:set_secret(super_admin_token, {Token, Expiry}),
+  set_env_var(Prefix ++ "_TOKEN", Token),
+  set_env_var(Prefix ++ "_TOKEN_EXPIRY", integer_to_list(Expiry)),
+  errm_http:set_secret(SecretKey, {Token, Expiry}),
   ok.
 
 token_and_expiry(TokenKey, ExpiryKey) ->
@@ -149,7 +126,7 @@ set_env_var(Key, Value) ->
     Bin when is_binary(Bin) -> Bin;
     Str -> list_to_binary(Str)
   end,
-  os:putenv(Key, Value),
+  os:putenv(Key, binary_to_list(ValBin)),
   NewLine = <<KeyBin/binary, "=", ValBin/binary, "\n">>,
   case file:read_file("errm.env") of
     {ok, Content} ->

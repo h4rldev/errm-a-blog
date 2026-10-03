@@ -14,7 +14,17 @@ get() ->
 
     {get, ["api", "admin", "stats"], fun admin_api:get_stats/1},
     {get, ["api", "admin", "register_token"], fun admin_api:get_register_token/1},
+    {get, ["api", "admin", "users"], fun admin_api:get_users/1},
+
     {post, ["api", "admin", "rotate", ":secret"], fun admin_api:rotate/1},
+
+    {patch, ["api", "admin", "edit_user"], fun admin_api:edit_user/1},
+
+    {get, ["api", "admin", "blocked_words", ":scope"], fun blocked_words_api:get_all/1},
+    {put, ["api", "admin", "blocked_words", ":scope"], fun blocked_words_api:set/1},
+
+    {get, ["api", "admin", "notifications"], fun notifications_api:get_all/1},
+    {delete, ["api", "admin", "notifications"], fun notifications_api:clear/1},
 
     {post, ["api", "post", ":post_id", "comments"], fun comments_api:create_comment/1},
     {put, ["api", "post", ":post_id", "comments", ":comment_id"], fun comments_api:edit_comment/1},

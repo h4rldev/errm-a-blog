@@ -1,14 +1,13 @@
 -module(posts_api).
 -export([get_all_posts/1, get_post/1, create_post/1, update_post/1, delete_post/1, get_tags/1]).
 
--define(POST_ORDER, [id, slug, title, summary, content_markdown, tags, last_edited_at, posted_at, author]).
+-define(POST_ORDER, [id, slug, title, summary, content_markdown, tags, edited_at, posted_at, author]).
 
 
 -spec get_all_posts(errm_http:request()) -> {ok, errm_http:response()}.
 get_all_posts(Req) ->
   Params = maps:get(params, Req, #{}),
-  Number = maps:get(<<"amount">>, Params, 10),
-  handle_get_posts(Number).
+  handle_get_posts(to_int(maps:get(<<"amount">>, Params, 10))).
 
 -spec get_post(errm_http:request()) -> {ok, errm_http:response()}.
 get_post(Req) ->
@@ -17,11 +16,7 @@ get_post(Req) ->
     undefined ->
       response_utils:error(400, "No id or slug provided");
     IdBin when is_binary(IdBin) ->
-      case string:to_integer(binary_to_list(IdBin)) of
-        {IntId, []} when is_integer(IntId) -> fetch_post_by_id(IntId);
-        _ -> fetch_post_by_slug(IdBin)
-      end;
-    _ -> response_utils:error(400, "Invalid id")
+      fetch_post(identifier(IdBin))
   end.
 
 -spec create_post(errm_http:request()) -> {ok, errm_http:response()}.
@@ -49,10 +44,7 @@ update_post(Req) ->
         undefined ->
           response_utils:error(400, "No id or slug provided");
         IdBin when is_binary(IdBin) ->
-          case string:to_integer(binary_to_list(IdBin)) of
-            {IntId, []} when is_integer(IntId) -> handle_update(Req, UserId, {id, IntId});
-            _ -> handle_update(Req, UserId, {slug, IdBin})
-          end
+          handle_update(Req, UserId, identifier(IdBin))
       end
   end.
 
@@ -65,11 +57,7 @@ delete_post(Req) ->
       case maps:get(<<"id">>, Params, undefined) of
         undefined -> response_utils:error(400, "No id or slug provided");
         IdBin when is_binary(IdBin) ->
-          case string:to_integer(binary_to_list(IdBin)) of
-            {IntId, []} when is_integer(IntId) -> sql_delete_post(UserId, {id, IntId});
-            _ ->
-              sql_delete_post(UserId, {slug, IdBin})
-          end
+          sql_delete_post(UserId, identifier(IdBin))
       end
   end.
 
@@ -82,8 +70,7 @@ get_tags(_Req) ->
     {ok, Db} ->
       case errm_sqlite:query(Db, "SELECT tags FROM posts WHERE tags IS NOT NULL") of
         {ok, Rows} ->
-          SafeRows = [Row || Row <- Rows, is_map(Row)],
-          AllTags = extract_tags(SafeRows),
+          AllTags = extract_tags(Rows),
           UniqueTags = deduplicate_tags(AllTags),
           SortedTags = lists:sort(UniqueTags),
           response_utils:ok(#{tags => SortedTags});
@@ -93,42 +80,14 @@ get_tags(_Req) ->
       end
   end.
 
--spec extract_tags([map()]) -> [binary()].
 extract_tags(Rows) ->
-  extract_tags(Rows, []).
+  [Tag || Row <- Rows, Tag <- tags_of(Row)].
 
--spec extract_tags([map()], [binary()]) -> [binary()].
-extract_tags([], Acc) ->
-  Acc;
-extract_tags([Row | Rest], Acc) ->
-  NewTags = extract_tags_from_row(Row),
-  extract_tags(Rest, NewTags ++ Acc).
-
--spec extract_tags_from_row(map()) -> [binary()].
-extract_tags_from_row(Row) when is_map(Row) ->
-  TagsRaw = maps:get("tags", Row, <<"[]">>),
-  TagsBin = blog_format:value_to_binary(TagsRaw),
-  case is_binary(TagsBin) of
-    true ->
-      try
-        errm_json:decode(TagsBin) of
-          {ok, List} when is_list(List) ->
-            convert_tags_to_binary(List, []);
-          _ ->
-            []
-      catch
-        _:_ -> []
-      end;
-    false ->
-      []
+tags_of(Row) ->
+  case errm_json:decode(blog_format:value_to_binary(maps:get("tags", Row, <<"[]">>))) of
+    {ok, List} when is_list(List) -> List;
+    _ -> []
   end.
-
--spec convert_tags_to_binary([term()], [binary()]) -> [binary()].
-convert_tags_to_binary([], Acc) ->
-  Acc;
-convert_tags_to_binary([Tag | Rest], Acc) ->
-  BinTag = blog_format:value_to_binary(Tag),
-  convert_tags_to_binary(Rest, [BinTag | Acc]).
 
 -spec deduplicate_tags([binary()]) -> [binary()].
 deduplicate_tags(Tags) ->
@@ -146,6 +105,7 @@ deduplicate_tags([Tag | Rest], Acc) ->
     false ->
       deduplicate_tags(Rest, Acc#{list_to_binary(Lower) => Tag})
   end.
+
 handle_get_posts(Amount) ->
   case blog_db:db() of
     {error, Reason} ->
@@ -156,7 +116,7 @@ handle_get_posts(Amount) ->
   end.
 
 fetch_posts(Db, Amount) ->
-  case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid LIMIT ?", [Amount]) of
+  case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid ORDER BY posts.posted_at DESC LIMIT ?", [Amount]) of
     {ok, []} ->
       response_utils:ok(#{message => "No posts available"});
     {ok, Rows} ->
@@ -172,34 +132,21 @@ fetch_posts(Db, Amount) ->
   end.
 
 
-fetch_post_by_id(Id) ->
-  case blog_db:db() of
-    {error, Reason} ->
-      logger:error("Database open failed: ~p", [Reason]),
-      response_utils:error(500, "Database error");
-    {ok, Db} ->
-      case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid WHERE posts.id = ? LIMIT 1", [Id]) of
-        {ok, []} ->
-          response_utils:error(404, "Post not found");
-        {ok, [Row]} ->
-          response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
-        {error, Reason1} ->
-          logger:error("Error fetching post: ~p", [Reason1]),
-          response_utils:error(500, "Database error")
-      end
-  end.
+fetch_post({id, Id}) ->
+  run_post_query("WHERE posts.id = ? LIMIT 1", [Id]);
+fetch_post({slug, Slug}) ->
+  run_post_query("WHERE posts.slug = ? LIMIT 1", [Slug]).
 
-fetch_post_by_slug(Slug) ->
+run_post_query(Where, Args) ->
   case blog_db:db() of
     {error, Reason} ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
-      case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid WHERE posts.slug = ? LIMIT 1", [Slug]) of
-        {ok, []} ->
-          response_utils:error(404, "Post not found");
-        {ok, [Row]} ->
-          response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
+      Sql = "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid " ++ Where,
+      case errm_sqlite:query(Db, Sql, Args) of
+        {ok, []} -> response_utils:error(404, "Post not found");
+        {ok, [Row]} -> response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
         {error, Reason1} ->
           logger:error("Error fetching post: ~p", [Reason1]),
           response_utils:error(500, "Database error")
@@ -264,7 +211,6 @@ insert_post(UserId, Title, Slug, Summary, ContentMarkdown, Tags) ->
       response_utils:error(500, "Database error");
     {ok, Db} ->
       Now = erlang:system_time(second),
-      logger:debug("Tags: ~p", [Tags]),
       Sql = "INSERT INTO posts (slug, title, summary, content_markdown, author_id, tags, posted_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
       case errm_sqlite:query(Db, Sql, [Slug, Title, Summary, ContentMarkdown, UserId, Tags, Now]) of
         {ok, _} ->
@@ -276,51 +222,12 @@ insert_post(UserId, Title, Slug, Summary, ContentMarkdown, Tags) ->
       end
   end.
 
-handle_update(Req, UserId, {Type, Value}) ->
-  case validate_update_body(Req) of
+handle_update(Req, UserId, Identifier) ->
+  case validate_post_request(Req) of
     {error, Status, Message} ->
       response_utils:error(Status, Message);
     {ok, Title, Slug, Summary, ContentMarkdown, TagsJson} ->
-      case Type of
-        id ->
-          sql_update_post(UserId, {id, Value}, Title, Slug, Summary, ContentMarkdown, TagsJson);
-        slug ->
-          sql_update_post(UserId, {slug, Value}, Title, Slug, Summary, ContentMarkdown, TagsJson)
-      end
-  end.
-
-validate_update_body(Req) ->
-  case maps:get(headers, Req, #{}) of
-    #{<<"content-type">> := <<"application/json">>} ->
-      case maps:get(body, Req, <<>>) of
-        <<>> -> {error, 400, "No body provided"};
-        Body ->
-          case errm_json:decode(Body) of
-            {ok, Data} when is_map(Data) ->
-              Title = maps:get(<<"title">>, Data, undefined),
-              Slug = maps:get(<<"slug">>, Data, undefined),
-              Summary = maps:get(<<"summary">>, Data, undefined),
-              ContentMarkdown = maps:get(<<"content_markdown">>, Data, undefined),
-              Tags = maps:get(<<"tags">>, Data, []),
-              case {Title, Slug, ContentMarkdown} of
-                {undefined, _, _} -> {error, 400, "No title provided"};
-                {_, undefined, _} -> {error, 400, "No slug provided"};
-                {_, _, undefined} -> {error, 400, "No content provided"};
-                {T, S, C} when is_binary(T), is_binary(S), is_binary(C) ->
-                  case validate_tags(Tags) of
-                    {ok, TagsJson} ->
-                      {ok, T, S, Summary, C, TagsJson};
-                    {error, Reason} ->
-                      {error, 400, Reason}
-                  end;
-                _ -> {error, 400, "Invalid JSON fields"}
-              end;
-            {error, Reason1} ->
-              logger:error("Error creating reading json: ~p", [Reason1]),
-              {error, 400, "Invalid JSON"}
-          end
-      end;
-    _ -> {error, 400, "Invalid content type"}
+      sql_update_post(UserId, Identifier, Title, Slug, Summary, ContentMarkdown, TagsJson)
   end.
 
 sql_update_post(UserId, Identifier, Title, Slug, Summary, ContentMarkdown, Tags) ->
@@ -334,36 +241,15 @@ sql_update_post(UserId, Identifier, Title, Slug, Summary, ContentMarkdown, Tags)
         {id, Id} -> {"id = ?", [Id]};
         {slug, SlugVal} -> {"slug = ?", [SlugVal]}
       end,
-      Sql = io_lib:format("UPDATE posts SET title = ?, slug = ?, summary = ?, content_markdown = ?, tags = ?, last_edited_at = ? WHERE ~s AND author_id = ?", [Where]),
-      SqlStr = lists:flatten(Sql),
-      Params = [Title, Slug, Summary, ContentMarkdown, Tags, Now] ++ WhereArgs ++ [UserId],
-      case errm_sqlite:query(Db, SqlStr, Params) of
+      Sql = "UPDATE posts SET title = ?, slug = ?, summary = ?, content_markdown = ?, tags = ?, edited_at = ? WHERE " ++ Where ++ " AND author_id = ?",
+      Params = [Title, Slug, Summary, ContentMarkdown, Tags, Now, WhereArgs, UserId],
+      case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
-          fetch_updated_post(Db, Identifier);
+          fetch_post(Identifier);
         {error, Reason1} ->
           logger:error("Error updating post: ~p", [Reason1]),
           response_utils:error(500, "Couldn't update post due to database error");
         _ -> response_utils:error(500, "Couldn't find post to update")
-      end
-  end.
-
-fetch_updated_post(Db, Identifier) ->
-  case Identifier of
-    {id, Id} ->
-      case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid WHERE posts.id = ? LIMIT 1", [Id]) of
-        {ok, [Row]} -> response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
-        {ok, []} -> response_utils:error(404, "Post not found");
-        {error, Reason} ->
-          logger:error("Error fetching post: ~p", [Reason]),
-          response_utils:error(500, "Database error")
-      end;
-    {slug, Slug} ->
-      case errm_sqlite:query(Db, "SELECT * FROM posts WHERE slug = ? LIMIT 1", [Slug]) of
-        {ok, [Row]} -> response_utils:ok(blog_format:format_post(Row), ?POST_ORDER);
-        {ok, []} -> response_utils:error(404, "Post not found");
-        {error, Reason1} ->
-          logger:error("Error fetching post: ~p", [Reason1]),
-          response_utils:error(500, "Database error")
       end
   end.
 
@@ -378,10 +264,9 @@ sql_delete_post(UserId, Identifier) ->
         {slug, SlugVal} -> {"slug = ?", [SlugVal]}
       end,
 
-      Sql = io_lib:format("DELETE FROM posts WHERE ~s AND author_id = ?", [Where]),
-      SqlStr = lists:flatten(Sql),
+      Sql = "DELETE FROM posts WHERE " ++ Where ++ " AND author_id = ?",
       Params = WhereArgs ++ [UserId],
-      case errm_sqlite:query(Db, SqlStr, Params) of
+      case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
           {ok, {204, #{}, <<>>}};
         {error, Reason1} ->
@@ -391,3 +276,17 @@ sql_delete_post(UserId, Identifier) ->
       end
   end.
 
+to_int(N) when is_integer(N) ->
+  N;
+to_int(B) when is_binary(B) ->
+  case string:to_integer(binary_to_list(B)) of
+    {I, []} when is_integer(I) -> I;
+    _ -> 10
+  end;
+to_int(_) -> 10.
+
+identifier(Bin) ->
+  case string:to_integer(binary_to_list(Bin)) of
+    {IntId, []} when is_integer(IntId) -> {id, IntId};
+    _ -> {slug, Bin}
+  end.
