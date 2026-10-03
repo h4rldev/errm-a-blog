@@ -15,7 +15,7 @@ get() ->
   CORS = errm_http_cors:make(#{
     policies => [
       #{
-        origin => ["http://localhost:5173", "http://localhost", "http://127.0.0.1:5173", "http://127.0.0.1"],
+        origin => ["http://localhost:5173", "http://localhost", "http://127.0.0.1:5173", "http://127.0.0.1", "https://h4rl.dev"],
         methods => [get, post, put, delete, patch, options],
         headers => ["Content-Type", "Authorization", "Accept", "Origin"],
         credentials => true,
