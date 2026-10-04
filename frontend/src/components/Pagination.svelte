@@ -99,11 +99,11 @@
 <style>
  @reference "$tailcss";
 
-  .pagination {
-    @apply flex flex-row gap-4 items-center my-4;
-  }
+ .pagination {
+   @apply flex flex-row flex-wrap gap-4 items-center my-4;
+ }
  .pagination-search {
-   @apply flex-1 bg-(--color-bg) text-(--color-text) text-sm border border-(--color-overlay) py-1 px-2 focus:border-(--color-accent) focus:outline-none;
+   @apply grow basis-full sm:basis-0 bg-(--color-bg) text-(--color-text) text-sm border border-(--color-overlay) py-1 px-2 focus:border-(--color-accent) focus:outline-none;
  }
  .pagination label {
    @apply flex flex-row items-center gap-2 text-sm text-(--color-accent);
