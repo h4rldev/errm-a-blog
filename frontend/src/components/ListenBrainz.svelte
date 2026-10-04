@@ -1,6 +1,6 @@
-<script>
+<script lang="ts">
  import { onDestroy, onMount } from "svelte";
- import { create_listenbrainz } from "$lib/listenbrainz.svelte";
+ import { create_listenbrainz, type Listen } from "$lib/listenbrainz.svelte";
 
  let {
    username = "h4rl",
@@ -19,7 +19,7 @@
  });
 </script>
 
-{#if listenbrainz.is_loading && !listenbrainz.current_listen}
+{#if listenbrainz.is_loading && !listenbrainz.current_listen && !listenbrainz.last_listen}
   <div class="lb-now-playing lb-loading">
     <span> Loading... </span>
   </div>
@@ -27,13 +27,15 @@
   <div class="lb-now-playing lb-error">
     <span> Error: {listenbrainz.error} </span>
   </div>
-{:else if listenbrainz.current_listen}
+{:else if listenbrainz.current_listen || listenbrainz.last_listen}
+  {@const listen = (listenbrainz.current_listen ?? listenbrainz.last_listen) as Listen}
+  {@const playing_now = !!listenbrainz.current_listen}
   <div class="lb-now-playing">
     {#if show_album_art}
-      {@const cover_art_url = listenbrainz.get_cover_art_url(listenbrainz.current_listen)}
+      {@const cover_art_url = listenbrainz.get_cover_art_url(listen)}
       {#if cover_art_url}
-        {#if listenbrainz.current_listen.track_metadata.additional_info?.release_mbid}
-          <a href="https://musicbrainz.org/release/{listenbrainz.current_listen.track_metadata.additional_info?.release_mbid}" target="_blank" rel="noopener noreferrer">
+        {#if listen.track_metadata.additional_info?.release_mbid}
+          <a href="https://musicbrainz.org/release/{listen.track_metadata.additional_info?.release_mbid}" target="_blank" rel="noopener noreferrer">
             <img src={cover_art_url} alt="Album art" class="lb-cover-art" loading="lazy" />
           </a>
         {:else}
@@ -45,37 +47,41 @@
     {/if}
     <div class="lb-track-info">
       <div class="lb-track-name">
-        {#if listenbrainz.current_listen.track_metadata.additional_info?.track_mbid}
-          <a href="https://musicbrainz.org/track/{listenbrainz.current_listen.track_metadata.additional_info?.track_mbid}" target="_blank" rel="noopener noreferrer">
-            {listenbrainz.current_listen.track_metadata.track_name}
+        {#if listen.track_metadata.additional_info?.track_mbid}
+          <a href="https://musicbrainz.org/track/{listen.track_metadata.additional_info?.track_mbid}" target="_blank" rel="noopener noreferrer">
+            {listen.track_metadata.track_name}
           </a>
         {:else}
-          {listenbrainz.current_listen.track_metadata.track_name}
+          {listen.track_metadata.track_name}
         {/if}
       </div>
       <div class="lb-artist-name">
-        {#if listenbrainz.current_listen.track_metadata.additional_info?.artist_mbids}
-          {#each listenbrainz.current_listen.track_metadata.additional_info?.artist_mbids as artist_mbid}
+        {#if listen.track_metadata.additional_info?.artist_mbids}
+          {#each listen.track_metadata.additional_info?.artist_mbids as artist_mbid}
             <a href="https://musicbrainz.org/artist/{artist_mbid}" target="_blank" rel="noopener noreferrer">
-              {listenbrainz.current_listen.track_metadata.artist_name}
+              {listen.track_metadata.artist_name}
             </a>
           {/each}
         {:else}
-          {listenbrainz.current_listen.track_metadata.artist_name}
+          {listen.track_metadata.artist_name}
         {/if}
       </div>
-      {#if listenbrainz.current_listen.track_metadata.release_name}
+      {#if listen.track_metadata.release_name}
         <div class="lb-release-name">
-          {#if listenbrainz.current_listen.track_metadata.additional_info?.release_mbid}
-            <a class="special-link" href="https://musicbrainz.org/release/{listenbrainz.current_listen.track_metadata.additional_info?.release_mbid}" target="_blank" rel="noopener noreferrer">
-              {listenbrainz.current_listen.track_metadata.release_name}
+          {#if listen.track_metadata.additional_info?.release_mbid}
+            <a class="special-link" href="https://musicbrainz.org/release/{listen.track_metadata.additional_info?.release_mbid}" target="_blank" rel="noopener noreferrer">
+              {listen.track_metadata.release_name}
             </a>
           {:else}
-            {listenbrainz.current_listen.track_metadata.release_name}
+            {listen.track_metadata.release_name}
           {/if}
         </div>
       {/if}
-      <div class="lb-playing-indicator">● Now Playing</div>
+      {#if playing_now}
+        <div class="lb-playing-indicator">● Now Playing</div>
+      {:else}
+        <div class="lb-playing-indicator lb-last-played">Last played</div>
+      {/if}
     </div>
   </div>
 {:else}
@@ -131,6 +137,11 @@
  .lb-playing-indicator {
    @apply mx-4 text-xs text-(--color-accent) inline;
    animation: lb-pulse 1.5s ease-in-out infinite;
+ }
+
+ .lb-last-played {
+   @apply text-(--color-overlay);
+   animation: none;
  }
 
 

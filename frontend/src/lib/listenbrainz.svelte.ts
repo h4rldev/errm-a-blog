@@ -31,6 +31,7 @@ export const create_listenbrainz = (
   refresh_interval: number = 15000,
 ) => {
   let current_listen = $state<Listen | null>(null);
+  let last_listen = $state<Listen | null>(null);
   let is_loading = $state<boolean>(true);
   let error = $state<string | null>(null);
   let interval_id = $state<ReturnType<typeof setInterval> | undefined>(
@@ -46,29 +47,23 @@ export const create_listenbrainz = (
 
   const fetch_now_playing = async () => {
     try {
-      is_loading = true;
       error = null;
 
       const response = await fetch(
-        `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/playing-now`,
+        `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=1`,
+        { signal: AbortSignal.timeout(8000) },
       );
       if (!response.ok)
         throw new Error("HTTP error!, status: " + response.status);
 
       const data: ApiResponse = await response.json();
-      if (data.payload.listens && data.payload.listens.length > 0) {
-        const listen = data.payload.listens[0];
-        if (listen.playing_now) {
-          current_listen = listen;
-        } else {
-          current_listen = null;
-        }
-      } else {
-        current_listen = null;
-      }
+      const listen = data.payload.listens?.[0] ?? null;
+      if (listen) last_listen = listen;
+      current_listen = listen?.playing_now ? listen : null;
     } catch (e) {
-      error = e instanceof Error ? e.message : "Failed to fetch data";
-      current_listen = null;
+      if (!current_listen && !last_listen) {
+        error = e instanceof Error ? e.message : "Failed to fetch data";
+      }
     } finally {
       is_loading = false;
     }
@@ -94,6 +89,9 @@ export const create_listenbrainz = (
   return {
     get current_listen() {
       return current_listen;
+    },
+    get last_listen() {
+      return last_listen;
     },
     get is_loading() {
       return is_loading;
