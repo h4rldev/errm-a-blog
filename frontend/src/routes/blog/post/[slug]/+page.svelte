@@ -1,8 +1,8 @@
 <script lang="ts">
- import { onDestroy, onMount } from "svelte";
+ import { onDestroy, onMount, tick } from "svelte";
  import type { HTMLAnchorAttributes } from "svelte/elements";
  import { goto } from "$app/navigation";
- import { page } from "$app/state";
+ import { page as route } from "$app/state";
  import Cell from "$components/Cell.svelte";
  import PostModal from "$components/PostModal.svelte";
  import Heading from "$components/Heading.svelte";
@@ -10,7 +10,13 @@
  import RichMarkdown from "$components/RichMarkdown.svelte";
  import { blog } from "$lib/blog.svelte";
  import { blog_api, type Comment, type Post, ws_url, normalize_entry as normalize_comment } from "$lib/blog_api";
+ import Pagination from "$components/Pagination.svelte";
 
+ let per_page = $state(20);
+ let order = $state<"newest" | "oldest">("newest");
+ let page = $state(1);
+ let pagination: Pagination<Comment> | undefined = $state(undefined);
+ 
  let post = $state<Post | null>(null);
  let loading = $state<boolean>(true);
  let is_submitting = $state<boolean>(false);
@@ -58,7 +64,7 @@
  };
 
  
- let slug = $derived(page.params.slug);
+ let slug = $derived(route.params.slug);
 
  const load_post = async () => {
    loading = true;
@@ -121,13 +127,12 @@
      switch (msg.event) {
        case "post_comments:initial":
          comments = msg.comments.map(normalize_comment);
-         comments = comments.sort((a, b) => b.posted_at - a.posted_at);
          break;
        case "post_comments:new":
        	 {
 	   const comment = normalize_comment(msg);
 	   if (!comments.some((c) => c.id === comment.id)) {
-	     comments = [...comments, comment].sort((a, b) => b.posted_at - a.posted_at);
+	     comments = [...comments, comment];
 	   }
 	 }
          break;
@@ -162,8 +167,11 @@
  });
 
  $effect(() => {
-   if (comments.length && location.hash.startsWith("#comment-"))
-     document.querySelector(location.hash)?.scrollIntoView();
+   if (!comments.length || !location.hash.startsWith("#comment-")) return;
+   const id = Number(location.hash.slice("#comment-".length));
+   const p = pagination?.page_of(id);
+   if (p !== undefined && p > 0) page = p;
+   tick().then(() => document.querySelector(location.hash)?.scrollIntoView());
  });
  
  const delete_post = async () => {
@@ -228,47 +236,51 @@
             <form onsubmit={handle_submit} class="guestbook-form">
               <label class="username">
                 USERNAME
-                <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" />
+                <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" maxlength="32" />
               </label>
               <label class="content">
                 CONTENT (MARKDOWN)
-                <textarea bind:value={content} name="content" required placeholder="Write something..."></textarea>
+                <textarea bind:value={content} name="content" required placeholder="Write something..." maxlength="800"></textarea>
               </label>
               <button type="submit" class="button-guestbook" disabled={is_submitting}>
-                {loading ? 'Loading...' : 'Submit'}
+                {is_submitting ? 'Submitting...' : 'Submit'}
               </button>
             </form>
           </div>
         </Cell>
-        {#each comments as comment}
-          <div id={`comment-${comment.id}`}>
-            <Cell title="Comment">
-              <div class="title-and-meta">
-                <p class="font-bold">{comment.username}</p>
-                <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(comment.posted_at)}</p>
-                <p class="text-xs">{comment.edited_at ? blog_api.convert_unix_timestamp_to_date(comment.edited_at) : "never"}</p>
-              </div>
-              <RichMarkdown md={comment.content_markdown} />
-              {#if is_admin}
-                <div class="mt-4">
-                  <ul class="post-actions">
-                    <li><button class="button-edit" onclick={() => start_edit_comment(comment)}>Edit</button></li>
-                    <li><button class="button-delete" onclick={() => delete_comment(comment)}>Delete</button></li>
-                  </ul>
-                </div>
-              {/if}
-              {#if editing_comment_id === comment.id}
-                <form class="guestbook-form mt-4" onsubmit={(e) => { e.preventDefault(); save_edit_comment(comment); }}>
-                  <textarea bind:value={edited_content}></textarea>
-                  <div class="flex flex-row gap-2">
-                    <button type="submit" class="button-edit">Save</button>
-                    <button type="button" class="button-delete" onclick={cancel_edit_comment}>Cancel</button>
+        <Pagination bind:this={pagination} items={comments} bind:per_page bind:order bind:page>
+          {#snippet children(visible)}
+            {#each visible as comment}
+              <div id={`comment-${comment.id}`}>
+                <Cell title="Comment">
+                  <div class="title-and-meta">
+                    <p class="font-bold">{comment.username}</p>
+                    <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(comment.posted_at)}</p>
+                    <p class="text-xs">{comment.edited_at ? blog_api.convert_unix_timestamp_to_date(comment.edited_at) : "never"}</p>
                   </div>
-                </form>
-              {/if}
-            </Cell>
-          </div>
-        {/each}
+                  <RichMarkdown md={comment.content_markdown} />
+                  {#if is_admin}
+                    <div class="mt-4 flex justify-end">
+                      <ul class="post-actions">
+                        <li><button class="button-edit" onclick={() => start_edit_comment(comment)}>Edit</button></li>
+                        <li><button class="button-delete" onclick={() => delete_comment(comment)}>Delete</button></li>
+                      </ul>
+                    </div>
+                  {/if}
+                  {#if editing_comment_id === comment.id}
+                    <form class="guestbook-form mt-4" onsubmit={(e) => { e.preventDefault(); save_edit_comment(comment); }}>
+                      <textarea bind:value={edited_content}></textarea>
+                      <div class="flex flex-row gap-2">
+                        <button type="submit" class="button-edit">Save</button>
+                        <button type="button" class="button-delete" onclick={cancel_edit_comment}>Cancel</button>
+                      </div>
+                    </form>
+                  {/if}
+                </Cell>
+              </div>
+            {/each}
+          {/snippet}
+        </Pagination>
       </Cell>
   {/if}
 </main>

@@ -1,5 +1,5 @@
 <script lang="ts">
- import { onDestroy, onMount } from "svelte";
+ import { onDestroy, onMount, tick } from "svelte";
  import Cell from "$components/Cell.svelte";
  import Heading from "$components/Heading.svelte";
  import Link from "$components/Link.svelte";
@@ -13,14 +13,21 @@
    type PostGuestbookEntry,
  } from "$lib/blog_api";
  import { blog } from "$lib/blog.svelte";
+ import Pagination from "$components/Pagination.svelte";
 
+ let per_page = $state(20);
+ let order = $state<"newest" | "oldest">("newest");
+ let page = $state(1);
+ let pagination: Pagination<GuestbookEntry> | undefined = $state(undefined);
+ 
  let entries = $state<GuestbookEntry[]>([]);
  let ws = $state<WebSocket | null>(null);
  let username = $state<string | null>(null);
  let content = $state<string | null>(null);
  let loading = $state<boolean>(false);
  let error = $state<string | null>(null);
- let timeout_id = $state<ReturnType<typeof setTimeout> | undefined>(undefined);
+ let ws_open = $state<boolean>(false);
+ let subscribed = false;
  let editing_entry_id = $state<number | undefined>(undefined);
  let edited_content = $state<string>("");
  const is_admin = $derived(blog.user?.role.includes("admin") ?? false);
@@ -56,8 +63,11 @@
    blog.check();
    ws = new WebSocket(ws_url);
    ws!.onopen = () => {
-     ws!.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
-     ws!.send(JSON.stringify({ event: "fetch_guestbook" }));
+     ws_open = true;
+     subscribed = false;
+   };
+   ws!.onclose = () => {
+     ws_open = false;
    };
 
    ws!.onmessage = (e) => {
@@ -65,13 +75,12 @@
      switch (msg.event) {
        case "guestbook:initial":
 	 entries = msg.entries.map(normalize_entry);
-	 entries = entries.sort((a, b) => b.posted_at - a.posted_at);
 	 break;
        case "guestbook:new":
 	 {
 	   const entry = normalize_entry(msg);
 	   if (!entries.some((e) => e.id === entry.id)) {
-	     entries = [...entries, entry].sort((a, b) => b.posted_at - a.posted_at);
+	     entries = [...entries, entry];
 	   }
 	 }
 	 break;
@@ -89,15 +98,16 @@
          break;
      }
    };
+ });
 
-   timeout_id = setTimeout(() => {
-     ws?.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
-     ws?.send(JSON.stringify({ event: "fetch_guestbook" }));
-   }, 30000);
+ $effect(() => {
+   if (!ws_open || !ws || subscribed) return;
+   subscribed = true;
+   ws.send(JSON.stringify({ event: "subscribe", channel: "guestbook" }));
+   ws.send(JSON.stringify({ event: "fetch_guestbook" }));
  });
 
  onDestroy(() => {
-   clearTimeout(timeout_id);
    ws?.close();
  });
 
@@ -117,7 +127,9 @@
    loading = true;
    error = "";
    try {
-     const data = await blog_api.create_guestbook_entry(payload);
+     await blog_api.create_guestbook_entry(payload);
+     username = "";
+     content = "";
    } catch (err: any) {
      error = err.message || "Failed to create guestbook entry";
    } finally {
@@ -126,8 +138,11 @@
  };
 
  $effect(() => {
-   if (entries.length && location.hash.startsWith("#entry-"))
-     document.querySelector(location.hash)?.scrollIntoView();
+   if (!entries.length || !location.hash.startsWith("#entry-")) return;
+   const id = Number(location.hash.slice("#entry-".length));
+   const p = pagination?.page_of(id);
+   if (p !== undefined && p > 0) page = p;
+   tick().then(() => document.querySelector(location.hash)?.scrollIntoView());
  });
 </script>
 
@@ -140,11 +155,11 @@
         <form onsubmit={handle_submit} class="guestbook-form">
           <label class="username">
             USERNAME
-            <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" />
+            <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" maxlength="32" />
           </label>
           <label class="content">
             CONTENT (MARKDOWN)
-            <textarea bind:value={content} name="content" placeholder="Write something..."></textarea>
+            <textarea bind:value={content} name="content" placeholder="Write something..." maxlength="800"></textarea>
           </label>
           <button type="submit" class="button-guestbook" disabled={loading}>
             {loading ? 'Loading...' : 'Submit'}
@@ -154,36 +169,40 @@
     </Cell>
 
     <Cell title="Entries">
-      {#each entries as entry}
-        <div id={`entry-${entry.id}`}>
-          <Cell title="Entry">
-            <div class="title-and-meta">
-              <p class="font-bold">{entry.username}</p>
-              <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(entry.posted_at)}</p>
-              <p class="text-xs">{entry.edited_at ? blog_api.convert_unix_timestamp_to_date(entry.edited_at) : "never"}</p>
-            </div>
-            <RichMarkdown md={entry.content_markdown} />
-            {#if is_admin}
-              <div class="mt-4">
-                <ul class="post-actions">
-                  <li><button class="button-edit" onclick={() => start_edit(entry)}>Edit</button></li>
-                  <li><button class="button-delete" onclick={() => delete_entry(entry)}>Delete</button></li>
-                </ul>
-              </div>
-            {/if}
-            {#if editing_entry_id === entry.id}
-              <form class="guestbook-form mt-4"
-                    onsubmit={(e) => { e.preventDefault(); save_edit(entry); }}>
-                <textarea bind:value={edited_content}></textarea>
-                <div class="flex flex-row gap-2">
-                  <button type="submit" class="button-edit">Save</button>
-                  <button type="button" class="button-delete" onclick={cancel_edit}>Cancel</button>
+      <Pagination bind:this={pagination} items={entries} bind:per_page bind:order bind:page>
+        {#snippet children(visible)}
+          {#each visible as entry}
+            <div id={`entry-${entry.id}`}>
+              <Cell title="Entry">
+                <div class="title-and-meta">
+                  <p class="font-bold">{entry.username}</p>
+                  <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(entry.posted_at)}</p>
+                  <p class="text-xs">{entry.edited_at ? blog_api.convert_unix_timestamp_to_date(entry.edited_at) : "never"}</p>
                 </div>
-              </form>
-            {/if}
-          </Cell>
-        </div>
-      {/each}
+                <RichMarkdown md={entry.content_markdown} />
+                {#if is_admin}
+                  <div class="mt-4 flex justify-end">
+                    <ul class="post-actions">
+                      <li><button class="button-edit" onclick={() => start_edit(entry)}>Edit</button></li>
+                      <li><button class="button-delete" onclick={() => delete_entry(entry)}>Delete</button></li>
+                    </ul>
+                  </div>
+                {/if}
+                {#if editing_entry_id === entry.id}
+                  <form class="guestbook-form mt-4"
+                        onsubmit={(e) => { e.preventDefault(); save_edit(entry); }}>
+                    <textarea bind:value={edited_content}></textarea>
+                    <div class="flex flex-row gap-2">
+                      <button type="submit" class="button-edit">Save</button>
+                      <button type="button" class="button-delete" onclick={cancel_edit}>Cancel</button>
+                    </div>
+                  </form>
+                {/if}
+              </Cell>
+            </div>
+          {/each}
+        {/snippet}
+      </Pagination>
     </Cell>
   </Cell>
 </main>

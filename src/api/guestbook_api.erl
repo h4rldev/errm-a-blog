@@ -63,7 +63,7 @@ validate_guestbook_entry_request(Req) ->
                 {undefined, _} -> {error, 400, "No username provided"};
                 {_, undefined} -> {error, 400, "No content provided"};
                 {U, C} when is_binary(U), is_binary(C) ->
-                  {ok, U, C};
+                  validate_lengths(U, C);
                 _ -> {error, 400, "Invalid JSON fields"}
               end;
             {error, Reason} ->
@@ -81,14 +81,15 @@ insert_guestbook_entry(Username, ContentMarkdown) ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
+      SanitizedUsername = blog_filter:sanitize(Username, <<"guestbook">>),
       SanitizedContent = blog_filter:sanitize(ContentMarkdown, <<"guestbook">>),
       Now = erlang:system_time(second),
       Sql = "INSERT INTO guestbook_entries (username, content_markdown, posted_at) VALUES (?, ?, ?)",
-      case errm_sqlite:query(Db, Sql, [Username, SanitizedContent, Now]) of
+      case errm_sqlite:query(Db, Sql, [SanitizedUsername, SanitizedContent, Now]) of
         {ok, _} ->
           {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
-          blog_ws_broadcast:guestbook(created, Username, SanitizedContent, integer_to_binary(LastId), integer_to_binary(Now)),
-          blog_notifications:record(<<"guestbook">>, <<"created">>, Username, SanitizedContent, integer_to_binary(LastId), blog_notifications:guestbook_target(integer_to_binary(LastId))),
+          blog_ws_broadcast:guestbook(created, SanitizedUsername, SanitizedContent, integer_to_binary(LastId), integer_to_binary(Now)),
+          blog_notifications:record(<<"guestbook">>, <<"created">>, SanitizedUsername, SanitizedContent, integer_to_binary(LastId), blog_notifications:guestbook_target(integer_to_binary(LastId))),
           response_utils:ok(#{message => <<"Guestbook entry created successfully">>, id => LastId});
         {error, Reason1} ->
           logger:error("Error creating guestbook entry: ~p", [Reason1]),
@@ -145,3 +146,12 @@ sql_update_guestbook_entry(EntryId, Username, ContentMarkdown) ->
       end
   end.
 
+validate_lengths(U, C) when is_binary(U), is_binary(C) ->
+  case string:length(U) > 32 of
+    true -> {error, 400, "Username too long (max 32 characters)"};
+    false ->
+      case string:length(C) > 800 of
+        true -> {error, 400, "Content too long (max 800 characters)"};
+        false -> {ok, U, C}
+      end
+  end.

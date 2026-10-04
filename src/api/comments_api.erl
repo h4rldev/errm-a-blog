@@ -83,7 +83,7 @@ validate_comment_request(Req) ->
                 {undefined, _} -> {error, 400, "No username provided"};
                 {_, undefined} -> {error, 400, "No content provided"};
                 {U, C} when is_binary(U), is_binary(C) ->
-                  {ok, U, C};
+                  validate_lengths(U, C);
                 _ -> {error, 400, "Invalid JSON fields"}
               end;
             {error, Reason} ->
@@ -112,15 +112,16 @@ insert_comment(PostId, Username, ContentMarkdown) ->
           logger:error("Database open failed: ~p", [Reason]),
           response_utils:error(500, "Database error");
         {ok, Db} ->
+          SanitizedUsername = blog_filter:sanitize(Username, <<"comments">>),
           SanitizedContent = blog_filter:sanitize(ContentMarkdown, <<"comments">>),
           Now = erlang:system_time(second),
           Sql = "INSERT INTO post_comments (post_id, username, content_markdown, posted_at) VALUES (?, ?, ?, ?)",
-          Params = [PostId, Username, SanitizedContent, Now],
+          Params = [PostId, SanitizedUsername, SanitizedContent, Now],
           case errm_sqlite:query(Db, Sql, Params) of
             {ok, _} ->
               {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
-              blog_ws_broadcast:comment(created, Username, SanitizedContent, integer_to_binary(LastId), integer_to_binary(PostId), integer_to_binary(Now)),
-              blog_notifications:record(<<"comment">>, <<"created">>, Username, SanitizedContent, integer_to_binary(PostId), blog_notifications:comment_target(integer_to_binary(PostId), integer_to_binary(LastId))),
+              blog_ws_broadcast:comment(created, SanitizedUsername, SanitizedContent, integer_to_binary(LastId), integer_to_binary(PostId), integer_to_binary(Now)),
+              blog_notifications:record(<<"comment">>, <<"created">>, SanitizedUsername, SanitizedContent, integer_to_binary(PostId), blog_notifications:comment_target(integer_to_binary(PostId), integer_to_binary(LastId))),
               response_utils:ok(#{message => <<"Comment created successfully">>, id => LastId});
             {error, Reason1} ->
               logger:error("Error creating comment: ~p", [Reason1]),
@@ -212,3 +213,12 @@ bin_to_int(Str) when is_list(Str) ->
 bin_to_int(_) ->
   {error, invalid}.
 
+validate_lengths(U, C) when is_binary(U), is_binary(C) ->
+  case string:length(U) > 32 of
+    true -> {error, 400, "Username too long (max 32 characters)"};
+    false ->
+      case string:length(C) > 800 of
+        true -> {error, 400, "Content too long (max 800 characters)"};
+        false -> {ok, U, C}
+      end
+  end.

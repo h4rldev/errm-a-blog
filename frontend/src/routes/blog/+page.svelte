@@ -7,6 +7,7 @@
  import Meta from "$components/Meta.svelte";
  import Heading from "$components/Heading.svelte";
  import Link from "$components/Link.svelte";
+ import Pagination from "$components/Pagination.svelte";
  import { blog } from "$lib/blog.svelte";
  import { blog_api, type Post, type User } from "$lib/blog_api";
 
@@ -18,24 +19,14 @@
  let show_edit_modal = $state<boolean>(false);
  let post_to_edit = $state<Post | null>(null);
 
- let query = $state<string>("");
- let filtered_posts = $derived(
-   query.trim() === ""
-   ? posts
-   : posts.filter((p) => {
-     const q = query.trim().toLowerCase();
-     return Object.entries(p).some(([k, v]) => {
-       if (v === null || v === undefined) return false;
-       if (typeof v === "object")
-	 return Object.values(v).some((x) =>
-	   String(x ?? "")
-	     .toLowerCase()
-	     .includes(q),
-	 );
-       return String(v).toLowerCase().includes(q);
-     });
-   }),
- );
+ let per_page = $state(20);
+ let order = $state<"newest" | "oldest">("newest");
+ let page = $state(1);
+
+ const post_filter = (post: Post, q: string): boolean =>
+   [post.title, post.summary, post.content_markdown, post.author?.username].some(
+     (v) => typeof v === "string" && v.toLowerCase().includes(q),
+   );
 
  const load = async () => {
    try {
@@ -109,61 +100,52 @@
     {:else if show_edit_modal}
       <PostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_saved={() => { load(); }} post_id={post_to_edit?.id} post_slug={post_to_edit?.slug} />
     {:else}
-        <Cell title="Search">
-          <div class="search-container">
-            <input id="post-search" name="search" type="text" bind:value={query} placeholder="Search posts by any field..." class="search-input" />
-          </div>
-        </Cell>
         <Cell title="Posts">
           {#if loading}
             <p>Loading...</p>
           {:else if error}
             <p class="text-(--color-error)">{error}</p>
           {:else}
-            <ul>
-              {#each filtered_posts as post}
-                {@const identifier = post.slug === "" ? post.id : post.slug}
-                {@const summary = (post.summary || post.content_markdown).length > 50 ? (post.summary || post.content_markdown).slice(0, 50) + '...' : (post.summary || post.content_markdown)}
-                <li>
-                  <Cell title="Post">
-                    <div class="title-and-actions">
-                      <a href="/blog/post/{identifier}/" class="post-link" target="_self">
-                        <Heading level="3">
-                          <span class="title">{post.title}</span>
-                        </Heading>
-                      </a>
+            <Pagination items={posts} bind:per_page bind:order bind:page filter={post_filter}>
+              {#snippet children(visible)}
+                <ul>
+                  {#each visible as post}
+                    {@const identifier = post.slug === "" ? post.id : post.slug}
+                    {@const summary = (post.summary || post.content_markdown).length > 50 ? (post.summary || post.content_markdown).slice(0, 50) + '...' : (post.summary || post.content_markdown)}
+                    <li>
+                      <Cell title="Post">
+                        <div class="title-and-actions">
+                          <a href="/blog/post/{identifier}/" class="post-link" target="_self">
+                            <Heading level="3">
+                              <span class="title">{post.title}</span>
+                            </Heading>
+                          </a>
 
-                      {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
-                        <ul class="post-actions">
-                          <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
-                          <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
-                        </ul>
-                      {/if}
-                    </div>
-                    <div class="post_specific">
-                      <p> {summary} </p>
-                      <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
-                    </div>
-                  </Cell>
-                </li>
-              {/each}
-            </ul>
+                          {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
+                            <ul class="post-actions mt-1">
+                              <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
+                              <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
+                            </ul>
+                          {/if}
+                        </div>
+                        <div class="post_specific">
+                          <p> {summary} </p>
+                          <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
+                        </div>
+                      </Cell>
+                    </li>
+                  {/each}
+                </ul>
+              {/snippet}
+            </Pagination>
           {/if}
         </Cell>
     {/if}
   </div>
 </main>
 
-<style>
+ <style>
  @reference "$tailcss";
-
- .search-container {
-   @apply flex flex-row justify-center w-full;
- }
-
- .search-input {
-   @apply bg-(--color-bg) text-(--color-text) p-2 w-full focus:border-(--color-accent) focus:outline-none focus:ring-(--color-accent) w-full mt-4;
- }
 
  .auth {
    @apply flex flex-col justify-center;
