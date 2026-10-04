@@ -7,7 +7,7 @@ sanitize(Text, Scope) ->
 
 apply_patterns(Acc, []) -> Acc;
 apply_patterns(Acc, [Pattern | Rest]) ->
-  try re:replace(Acc, Pattern, <<"####">>, [global, caseless, unicode]) of
+  try re:replace(Acc, Pattern, <<"####">>, [global, caseless]) of
     Masked when is_binary(Masked) -> apply_patterns(Masked, Rest);
     Masked when is_list(Masked) -> apply_patterns(iolist_to_binary(Masked), Rest)
   catch _:_ ->
