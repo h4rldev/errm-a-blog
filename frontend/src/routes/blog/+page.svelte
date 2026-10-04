@@ -105,6 +105,8 @@
             <p>Loading...</p>
           {:else if error}
             <p class="text-(--color-error)">{error}</p>
+          {:else if posts.length === 0}
+            <p>No posts available</p>
           {:else}
             <Pagination items={posts} bind:per_page bind:order bind:page filter={post_filter}>
               {#snippet children(visible)}

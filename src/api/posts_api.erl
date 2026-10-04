@@ -118,7 +118,7 @@ handle_get_posts(Amount) ->
 fetch_posts(Db, Amount) ->
   case errm_sqlite:query(Db, "SELECT posts.*, users.username, users.role FROM posts JOIN users ON posts.author_id = users.uuid ORDER BY posts.posted_at DESC LIMIT ?", [Amount]) of
     {ok, []} ->
-      response_utils:ok(#{message => "No posts available"});
+      response_utils:ok(#{<<"amount">> => 0, <<"posts">> => []}, ?POST_ORDER);
     {ok, Rows} ->
       Posts = [blog_format:format_post(Row) || Row <- Rows],
       Response = #{
