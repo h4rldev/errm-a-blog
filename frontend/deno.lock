@@ -10,6 +10,7 @@
     "npm:@types/node@^26.6.3": "26.6.3",
     "npm:prettier-plugin-svelte@^4.1.1": "4.1.1_prettier@3.9.9_svelte@5.57.1",
     "npm:prettier@^3.9.9": "3.9.9",
+    "npm:rehype-highlight@^7.0.2": "7.0.2",
     "npm:svelte-check@^4.7.6": "4.7.6_svelte@5.57.1_typescript@6.0.3",
     "npm:svelte-exmarkdown@^5.0.2": "5.0.2_svelte@5.57.1",
     "npm:svelte@^5.57.1": "5.57.1",
@@ -437,6 +438,24 @@
     "graceful-fs@4.2.11": {
       "integrity": "sha512-RbJ5/jmFcNNCcDV5o9eTnBLJ/HszWV0P73bc+Ff4nS/rJj+YaS6IGyiOL0VoBYX+l1Wrl3k63h/KrH+nhJ0XvQ=="
     },
+    "hast-util-is-element@3.0.0": {
+      "integrity": "sha512-Val9mnv2IWpLbNPqc/pUem+a7Ipj2aHacCwgNfTiK0vJKl0LF+4Ba4+v1oPHFpf3bLYmreq0/l3Gud9S5OH42g==",
+      "dependencies": [
+        "@types/hast"
+      ]
+    },
+    "hast-util-to-text@4.0.2": {
+      "integrity": "sha512-KK6y/BN8lbaq654j7JgBydev7wuNMcID54lkRav1P0CaE1e47P72AWWPiGKXTJU271ooYzcvTAn/Zt0REnvc7A==",
+      "dependencies": [
+        "@types/hast",
+        "@types/unist",
+        "hast-util-is-element",
+        "unist-util-find-after"
+      ]
+    },
+    "highlight.js@11.11.2": {
+      "integrity": "sha512-oaXMACAU0kzOMXBjWpNcX+vlwSBCIAiZ9BHa7gA15NOTtT2L/l8OSZDuqS2XppOhZBPJ7hm4o8ep2kyuip2uEQ=="
+    },
     "is-plain-obj@4.1.0": {
       "integrity": "sha512-+Pgi+vMuUNkJyExiMBt5IlFoMyKnr5zhJ4Uspz58WOhBF5QoIZkFyNHIbBAtHwzVAgk5RtndVNsDRN61/mmDqg=="
     },
@@ -606,6 +625,14 @@
     },
     "longest-streak@3.1.0": {
       "integrity": "sha512-9Ri+o0JYgehTaVBBDoMqIl8GXtbWg711O3srftcHhZ0dqnETqLaoIK0x17fUw9rFSlK/0NlsKe0Ahhyl5pXE2g=="
+    },
+    "lowlight@3.3.0": {
+      "integrity": "sha512-0JNhgFoPvP6U6lE/UdVsSq99tn6DhjjpAj5MxG49ewd2mOBVtwWYIT8ClyABhq198aXXODMU6Ox8DrGy/CpTZQ==",
+      "dependencies": [
+        "@types/hast",
+        "devlop",
+        "highlight.js"
+      ]
     },
     "magic-string@0.30.21": {
       "integrity": "sha512-vd2F4YUyEXKGcLHoq+TEyCjxueSeHnFxyyjNp80yg0XV4vUhnDer/lvvlqM/arB5bXQN5K2/3oinyCRyx8T2CQ==",
@@ -1044,6 +1071,16 @@
     "readdirp@4.1.2": {
       "integrity": "sha512-GDhwkLfywWL2s6vEjyhri+eXmfH6j1L7JE27WhqLeYzoh/A3DBaYGEj2H/HFZCn/kMfim73FXxEJTw06WtxQwg=="
     },
+    "rehype-highlight@7.0.2": {
+      "integrity": "sha512-k158pK7wdC2qL3M5NcZROZ2tR/l7zOzjxXd5VGdcfIyoijjQqpHd3JKtYSBDpDZ38UI2WJWuFAtkMDxmx5kstA==",
+      "dependencies": [
+        "@types/hast",
+        "hast-util-to-text",
+        "lowlight",
+        "unist-util-visit",
+        "vfile"
+      ]
+    },
     "remark-gfm@4.0.1": {
       "integrity": "sha512-1quofZ2RQ9EWdeN34S79+KExV1764+wCUGop5CPL1WGdD0ocPpu91lzPGbwWMECpEpd42kJGQwzRfyov9j4yNg==",
       "dependencies": [
@@ -1212,6 +1249,13 @@
         "vfile"
       ]
     },
+    "unist-util-find-after@5.0.0": {
+      "integrity": "sha512-amQa0Ep2m6hE2g72AugUItjbuM8X8cGQnFoHk0pGfrFeT9GZhzN5SW8nRsiGKK7Aif4CrACPENkA6P/Lw6fHGQ==",
+      "dependencies": [
+        "@types/unist",
+        "unist-util-is"
+      ]
+    },
     "unist-util-is@6.0.1": {
       "integrity": "sha512-LsiILbtBETkDz8I9p1dQ0uyRUWuaQzd/cuEeS1hoRSyW5E5XGmTzlwY1OrNzzakGowI9Dr/I8HVaw4hTtnxy8g==",
       "dependencies": [
@@ -1311,6 +1355,7 @@
         "npm:@types/node@^26.6.3",
         "npm:prettier-plugin-svelte@^4.1.1",
         "npm:prettier@^3.9.9",
+        "npm:rehype-highlight@^7.0.2",
         "npm:svelte-check@^4.7.6",
         "npm:svelte-exmarkdown@^5.0.2",
         "npm:svelte@^5.57.1",

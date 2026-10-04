@@ -1,13 +1,19 @@
 <script lang="ts">
  import Markdown, { denylist, type Plugin } from "svelte-exmarkdown";
+ import rehypeHighlight from "rehype-highlight";
  import Heading from "$components/Heading.svelte";
  import Link from "$components/Link.svelte";
 
  let { md, render_images = false } = $props();
+
+ const plugins: Plugin[] = [
+   { rehypePlugin: rehypeHighlight },
+   ...(render_images ? [] : [denylist(["img"])]),
+ ];
 </script>
 
 <div class="prose prose-neutral max-w-none rich-markdown">
-  <Markdown md={md} plugins={render_images ? [] : [denylist(["img"])]}>
+  <Markdown md={md} {plugins}>
     {#snippet h1(props)}
       {@const { children } = props}
       <Heading level="1">{@render children?.()}</Heading>

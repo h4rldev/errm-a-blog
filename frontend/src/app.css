@@ -137,3 +137,50 @@
         @apply hover:cursor-pointer bg-(--color-accent) text-(--color-bg) font-bold py-2 px-4 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out;
     }
 }
+
+.rich-markdown .hljs-comment,
+.rich-markdown .hljs-quote {
+    color: var(--color-overlay);
+    font-style: italic;
+}
+.rich-markdown .hljs-keyword,
+.rich-markdown .hljs-selector-tag,
+.rich-markdown .hljs-literal,
+.rich-markdown .hljs-type {
+    color: var(--color-accent);
+}
+.rich-markdown .hljs-string,
+.rich-markdown .hljs-regexp,
+.rich-markdown .hljs-addition {
+    color: var(--color-confirm);
+}
+.rich-markdown .hljs-number,
+.rich-markdown .hljs-built_in,
+.rich-markdown .hljs-symbol {
+    color: var(--color-link);
+}
+.rich-markdown .hljs-title,
+.rich-markdown .hljs-title.function_,
+.rich-markdown .hljs-section {
+    color: var(--color-link);
+    font-weight: bold;
+}
+.rich-markdown .hljs-attr,
+.rich-markdown .hljs-attribute,
+.rich-markdown .hljs-variable,
+.rich-markdown .hljs-template-variable {
+    color: var(--color-error);
+}
+.rich-markdown .hljs-meta,
+.rich-markdown .hljs-doctag {
+    color: var(--color-subtext);
+}
+.rich-markdown .hljs-deletion {
+    color: var(--color-error);
+}
+.rich-markdown .hljs-emphasis {
+    font-style: italic;
+}
+.rich-markdown .hljs-strong {
+    font-weight: bold;
+}
