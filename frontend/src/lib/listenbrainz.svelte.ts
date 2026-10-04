@@ -49,17 +49,27 @@ export const create_listenbrainz = (
     try {
       error = null;
 
-      const response = await fetch(
-        `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=1`,
-        { signal: AbortSignal.timeout(8000) },
-      );
-      if (!response.ok)
-        throw new Error("HTTP error!, status: " + response.status);
+      const [playing_res, recent_res] = await Promise.all([
+        fetch(
+          `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/playing-now`,
+          { signal: AbortSignal.timeout(8000) },
+        ),
+        fetch(
+          `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=1`,
+          { signal: AbortSignal.timeout(8000) },
+        ),
+      ]);
 
-      const data: ApiResponse = await response.json();
-      const listen = data.payload.listens?.[0] ?? null;
-      if (listen) last_listen = listen;
-      current_listen = listen?.playing_now ? listen : null;
+      if (playing_res.ok) {
+        const data: ApiResponse = await playing_res.json();
+        const listen = data.payload.listens?.[0] ?? null;
+        current_listen = listen?.playing_now ? listen : null;
+      }
+
+      if (recent_res.ok) {
+        const recent: ApiResponse = await recent_res.json();
+        last_listen = recent.payload.listens?.[0] ?? last_listen;
+      }
     } catch (e) {
       if (!current_listen && !last_listen) {
         error = e instanceof Error ? e.message : "Failed to fetch data";
