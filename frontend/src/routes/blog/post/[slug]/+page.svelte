@@ -124,8 +124,12 @@
          comments = comments.sort((a, b) => b.posted_at - a.posted_at);
          break;
        case "post_comments:new":
-         comments = [...comments, normalize_comment(msg)];
-         comments = comments.sort((a, b) => b.posted_at - a.posted_at);
+       	 {
+	   const comment = normalize_comment(msg);
+	   if (!comments.some((c) => c.id === comment.id)) {
+	     comments = [...comments, comment].sort((a, b) => b.posted_at - a.posted_at);
+	   }
+	 }
          break;
        case "post_comments:edited":
          comments = comments.map((comment) =>

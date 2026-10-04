@@ -109,7 +109,7 @@
  };
  
  const split_list = (s: string): string[] =>
-   s.split(/[\n,]/).map((x) => x.trim()).filter(Boolean);
+   s.split("\n").map((x) => x.trim()).filter(Boolean);
 
  const load_blocked = async () => {
    const data = await blog_api.admin_get_blocked_words(blocked_scope);
@@ -339,9 +339,9 @@
         <option value="comments">comments</option>
         <option value="guestbook">guestbook</option>
       </select>
-      <label for="blocked_keywords">Keywords (literal, comma or newline separated)</label>
+      <label for="blocked_keywords">Keywords (literal, one per line)</label>
       <textarea id="blocked_keywords" rows="4" bind:value={blocked_keywords}></textarea>
-      <label for="blocked_patterns">Patterns (regex, comma or newline separated)</label>
+      <label for="blocked_patterns">Patterns (regex, one per line)</label>
       <textarea id="blocked_patterns" rows="4" bind:value={blocked_patterns}></textarea>
       <button type="button" class="save" onclick={save_blocked}>{blocked_saved ? "Saved!" : "Save"}</button>
     </div>

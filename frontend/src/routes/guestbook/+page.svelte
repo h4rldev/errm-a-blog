@@ -68,8 +68,12 @@
 	 entries = entries.sort((a, b) => b.posted_at - a.posted_at);
 	 break;
        case "guestbook:new":
-	 entries = [...entries, normalize_entry(msg)];
-	 entries = entries.sort((a, b) => b.posted_at - a.posted_at);
+	 {
+	   const entry = normalize_entry(msg);
+	   if (!entries.some((e) => e.id === entry.id)) {
+	     entries = [...entries, entry].sort((a, b) => b.posted_at - a.posted_at);
+	   }
+	 }
 	 break;
        case "guestbook:edited":
 	 entries = entries.map((e) =>
@@ -94,6 +98,7 @@
 
  onDestroy(() => {
    clearTimeout(timeout_id);
+   ws?.close();
  });
 
  const handle_submit = async (e: Event) => {
