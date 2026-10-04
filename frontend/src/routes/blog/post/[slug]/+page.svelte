@@ -7,6 +7,7 @@
  import PostModal from "$components/PostModal.svelte";
  import Heading from "$components/Heading.svelte";
  import Link from "$components/Link.svelte";
+ import Meta from "$components/Meta.svelte";
  import RichMarkdown from "$components/RichMarkdown.svelte";
  import { blog } from "$lib/blog.svelte";
  import { blog_api, type Comment, type Post, ws_url, normalize_entry as normalize_comment } from "$lib/blog_api";
@@ -200,6 +201,7 @@
 </script>
 
 <main>
+  <Meta title={post?.title ?? "Post"} description={post?.summary ?? undefined} path={`/blog/post/${slug}/`} />
   <Cell title="Post">
     {#if loading}
       <p>Loading post...</p>
