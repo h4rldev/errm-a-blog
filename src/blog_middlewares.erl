@@ -47,6 +47,7 @@ get() ->
   ],
 
   [
+   blog_access_log:middleware(),
    errm_http_compress:compress(CompressionConfig),
    CORS,
    errm_http_cookie:with_cookies(),

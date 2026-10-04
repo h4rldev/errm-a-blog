@@ -25,6 +25,11 @@ start() ->
   end,
 
   logger:set_primary_config(level, Level),
+  logger:update_handler_config(default, formatter, {logger_formatter, #{
+    legacy_header => false,
+    single_line => true
+  }}),
+
   {ok, Pid} = errm_http:start(#{
     server_name => blog_config:get(server_name),
     port => blog_config:get(port),

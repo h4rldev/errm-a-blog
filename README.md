@@ -23,22 +23,31 @@ build your own frontend and drop it in, as long as it speaks the same API.
 Build and run the image:
 
 ```sh
+mkdir -p data
 sudo docker build -t errm-a-blog .
-sudo docker run -d --name errm-a-blog -p 8080:8080 -v errm-data:/app/data errm-a-blog
+sudo docker run -d --name errm-a-blog -p 8080:8080 -v "$PWD/data:/app/data" errm-a-blog
 ```
 
-Then open <http://localhost:8080/>.
+Then open <http://localhost:8080/>. Or `sudo docker compose up`, which bind-mounts
+`./data` the same way.
 
-The first boot applies migrations and writes `blog.db`, `errm.env` and
-`errm-config.json` into `/app/data`. Secrets are generated if absent and
-persisted there, so keep the volume.
+The first boot applies migrations and writes `blog.db`, `errm.env`,
+`errm-config.json` and (when `access_log_file` is set) `access.log` into
+`/app/data` — the host directory you mounted, so you can edit and grep them
+directly. Secrets are generated if absent and persisted there, so keep the
+directory.
+
+The mount directory must be writable by uid 1000 (the image's `app` user):
+create it as your user, or `sudo chown -R 1000:1000 data`.
 
 ## Configuration
 
 The container generates `errm-config.json` on first run: port, bind address, DB
-path and log level. Secrets (`JWT_SECRET`, `COOKIE_SECRET`, register and
-super-admin tokens) live in `errm.env`. Environment variables win over the file;
-both are read from `/app/data` by default.
+path, log level, and access logging. `log_access` turns request logging on or
+off; `access_log_file` is its destination (e.g. `/app/data/access.log`), empty
+logs to the container console. Secrets (`JWT_SECRET`, `COOKIE_SECRET`, register
+and super-admin tokens) live in `errm.env`. Environment variables win over the
+file; both are read from `/app/data` by default.
 
 ## Building multi-arch images
 

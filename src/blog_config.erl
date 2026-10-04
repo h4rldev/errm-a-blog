@@ -5,6 +5,7 @@
   ip_address :: string(),
   port :: non_neg_integer(),
   log_access :: boolean(),
+  access_log_file :: string(),
   internal_log_level :: string(),
   db_path :: string(),
   server_name :: string()
@@ -16,6 +17,7 @@ load() ->
     ip_address = "0.0.0.0",
     port = 8080,
     log_access = true,
+    access_log_file = "",
     internal_log_level = "debug",
     db_path = "blog.db",
     server_name = "errm-a-blog"
@@ -23,8 +25,8 @@ load() ->
 
   Config = case file:read_file("errm-config.json") of
     {ok, Data} ->
-      case errm_json:decode(Data) of
-        {ok, Decoded} when is_map(Decoded) ->
+      case errm_json:decode_stream(Data) of
+        {ok, Decoded, _Rest} when is_map(Decoded) ->
           Ip = maps:get(<<"ip_address">>, Decoded, Defaults#config.ip_address),
           Port = maps:get(<<"port">>, Decoded, Defaults#config.port),
           PortInt = case Port of
@@ -38,6 +40,8 @@ load() ->
             LA when is_boolean(LA) -> LA;
             _ -> Defaults#config.log_access
           end,
+
+          AccessLogFile = maps:get(<<"access_log_file">>, Decoded, Defaults#config.access_log_file),
           InternalLogLevel = maps:get(<<"internal_log_level">>, Decoded, Defaults#config.internal_log_level),
           DbPath = maps:get(<<"db_path">>, Decoded, Defaults#config.db_path),
           ServerName = maps:get(<<"server_name">>, Decoded, Defaults#config.server_name),
@@ -46,6 +50,7 @@ load() ->
             ip_address=json_to_string(Ip),
             port=PortInt,
             log_access=LogAccessBool,
+            access_log_file=json_to_string(AccessLogFile),
             internal_log_level=json_to_string(InternalLogLevel),
             db_path=json_to_string(DbPath),
             server_name=json_to_string(ServerName)
@@ -83,6 +88,7 @@ get(Key) ->
     ip_address -> Config#config.ip_address;
     port -> Config#config.port;
     log_access -> Config#config.log_access;
+    access_log_file -> Config#config.access_log_file;
     internal_log_level -> Config#config.internal_log_level;
     db_path -> Config#config.db_path;
     server_name -> Config#config.server_name;

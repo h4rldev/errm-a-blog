@@ -6,7 +6,4 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - errm-data:/app/data
-
-volumes:
-  errm-data:
+      - ./data:/app/data
