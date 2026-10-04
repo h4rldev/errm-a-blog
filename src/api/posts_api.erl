@@ -242,7 +242,7 @@ sql_update_post(UserId, Identifier, Title, Slug, Summary, ContentMarkdown, Tags)
         {slug, SlugVal} -> {"slug = ?", [SlugVal]}
       end,
       Sql = "UPDATE posts SET title = ?, slug = ?, summary = ?, content_markdown = ?, tags = ?, edited_at = ? WHERE " ++ Where ++ " AND author_id = ?",
-      Params = [Title, Slug, Summary, ContentMarkdown, Tags, Now, WhereArgs, UserId],
+      Params = [Title, Slug, Summary, ContentMarkdown, Tags, Now] ++ WhereArgs ++ [UserId],
       case errm_sqlite:query(Db, Sql, Params) of
         {ok, []} ->
           fetch_post(Identifier);
