@@ -99,7 +99,7 @@
 
 @layer components {
     .post-actions {
-        @apply flex flex-row gap-2 z-50;
+        @apply flex flex-row gap-2 z-50 justify-end;
     }
     .button-edit {
         @apply min-w-24 hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
