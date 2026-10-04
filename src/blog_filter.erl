@@ -7,7 +7,7 @@ sanitize(Text, Scope) ->
 
 apply_patterns(Acc, []) -> Acc;
 apply_patterns(Acc, [Pattern | Rest]) ->
-  try re:replace(Acc, Pattern, "####", [global, caseless]) of
+  try re:replace(Acc, Pattern, <<"####">>, [global, caseless]) of
     Masked when is_binary(Masked) -> apply_patterns(Masked, Rest)
   catch _:_ ->
     logger:error("Invalid blocked pattern ~p", [Pattern]),
