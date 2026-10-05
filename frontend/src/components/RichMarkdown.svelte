@@ -6,10 +6,10 @@
 
  let { md, render_images = false } = $props();
 
- const plugins: Plugin[] = [
+ const plugins = $derived<Plugin[]>([
    { rehypePlugin: rehypeHighlight },
    ...(render_images ? [] : [denylist(["img"])]),
- ];
+ ]);
 </script>
 
 <div class="prose prose-neutral max-w-none rich-markdown">
