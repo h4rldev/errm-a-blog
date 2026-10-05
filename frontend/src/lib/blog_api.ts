@@ -115,15 +115,16 @@ export const normalize_entry = (e: any): GuestbookEntry => ({
 const convert_unix_timestamp_to_date = (number: number): string => {
   const date = new Date(number * 1000);
   const now = new Date();
+  const time_opts: Intl.DateTimeFormatOptions = { hour12: false };
 
   const same_day =
     date.getFullYear() === now.getFullYear() &&
     date.getMonth() === now.getMonth() &&
     date.getDate() === now.getDate();
 
-  if (same_day) return date.toLocaleTimeString();
+  if (same_day) return date.toLocaleTimeString([], time_opts);
 
-  const time = date.toLocaleTimeString();
+  const time = date.toLocaleTimeString([], time_opts);
   const day = date.toLocaleDateString();
   return `${day} ${time}`;
 };
