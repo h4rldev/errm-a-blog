@@ -63,7 +63,7 @@
     <p>
       Some languages I'm familiar with are
       <Link href="https://c-language.org/">C</Link>,
-2      <Link href="https://erlang.org/">Erlang</Link> (Hey, this website is hosted on Erlang!),
+      <Link href="https://erlang.org/">Erlang</Link> (Hey, this website is hosted on Erlang!),
       <Link href="https://www.rust-lang.org/">Rust</Link>, and
       <Link href="https://www.typescript.org/">TypeScript</Link>.
     </p>
