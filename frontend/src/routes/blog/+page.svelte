@@ -8,6 +8,7 @@
  import Heading from "$components/Heading.svelte";
  import Link from "$components/Link.svelte";
  import Pagination from "$components/Pagination.svelte";
+ import RichMarkdown from "$components/RichMarkdown.svelte";
  import { blog } from "$lib/blog.svelte";
  import { blog_api, type Post, type User } from "$lib/blog_api";
 
@@ -18,15 +19,19 @@
  let show_modal = $state<boolean>(false);
  let show_edit_modal = $state<boolean>(false);
  let post_to_edit = $state<Post | null>(null);
-
+ let search = $state<string>("");
+ 
  let per_page = $state(20);
  let order = $state<"newest" | "oldest">("newest");
  let page = $state(1);
 
- const post_filter = (post: Post, q: string): boolean =>
-   [post.title, post.summary, post.content_markdown, post.author?.username].some(
-     (v) => typeof v === "string" && v.toLowerCase().includes(q),
-   );
+ const post_filter = (post: Post, q: string): boolean => {
+   const terms = q.split(/\s+/).map((t) => t.replace(/^#/, "")).filter(Boolean);
+   const hay = [post.title, post.summary, post.content_markdown, post.author?.username, ...(post.tags ?? [])]
+     .filter((v): v is string => typeof v === "string")
+     .map((v) => v.toLowerCase());
+   return terms.every((t) => hay.some((h) => h.includes(t)));
+ };
 
  const load = async () => {
    try {
@@ -98,55 +103,65 @@
     {#if show_modal}
       <PostModal show={show_modal} on_close={() => { show_modal = false; }} on_saved={() => { load(); }} />
     {:else if show_edit_modal}
-      <PostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_saved={() => { load(); }} post_id={post_to_edit?.id} post_slug={post_to_edit?.slug} />
+        <PostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_saved={() => { load(); }} post_id={post_to_edit?.id} post_slug={post_to_edit?.slug} />
     {:else}
-        <Cell title="Posts">
-          {#if loading}
-            <p>Loading...</p>
-          {:else if error}
-            <p class="text-(--color-error)">{error}</p>
-          {:else if posts.length === 0}
-            <p>No posts available</p>
-          {:else}
-            <Pagination items={posts} bind:per_page bind:order bind:page filter={post_filter}>
-              {#snippet children(visible)}
-                <ul>
-                  {#each visible as post}
-                    {@const identifier = post.slug === "" ? post.id : post.slug}
-                    {@const summary = (post.summary || post.content_markdown).length > 50 ? (post.summary || post.content_markdown).slice(0, 50) + '...' : (post.summary || post.content_markdown)}
-                    <li>
-                      <Cell title="Post">
-                        <div class="title-and-actions">
-                          <a href="/blog/post/{identifier}/" class="post-link" target="_self">
-                            <Heading level="3">
-                              <span class="title">{post.title}</span>
-                            </Heading>
-                          </a>
+          <Cell title="Posts">
+            {#if loading}
+              <p>Loading...</p>
+            {:else if error}
+              <p class="text-(--color-error)">{error}</p>
+            {:else if posts.length === 0}
+              <p>No posts available</p>
+            {:else}
+              <Pagination items={posts} bind:per_page bind:order bind:page bind:search filter={post_filter}>
+                {#snippet children(visible)}
+                  <ul>
+                    {#each visible as post}
+                      {@const identifier = post.slug === "" ? post.id : post.slug}
+                      {@const raw_summary = post.summary?.trim() || post.content_markdown || ""}
+                      {@const summary = raw_summary.length > 200 ? raw_summary.slice(0, 200) + "..." : raw_summary}
+                      <li>
+                        <Cell title="Post">
+                          <div class="title-and-actions">
+                            <div class="title-block">
+                              <a href="/blog/post/{identifier}/" class="post-link" target="_self">
+                                <Heading level="3">
+                                  <span class="title">{post.title}</span>
+                                </Heading>
+                              </a>
+                              {#if post.tags?.length}
+                                <ul class="post-tags">
+                                  {#each post.tags as tag}
+                                    <li><button type="button" class="post-tag" onclick={() => { search = tag; }}>#{tag}</button></li>
+                                  {/each}
+                                </ul>
+                              {/if}
+                            </div>
 
-                          {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
-                            <ul class="post-actions mt-1">
-                              <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
-                              <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
-                            </ul>
-                          {/if}
-                        </div>
-                        <div class="post_specific">
-                          <p> {summary} </p>
-                          <p> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
-                        </div>
-                      </Cell>
-                    </li>
-                  {/each}
-                </ul>
-              {/snippet}
-            </Pagination>
-          {/if}
-        </Cell>
+                            {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
+                              <ul class="post-actions mt-1">
+                                <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
+                                <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
+                              </ul>
+                            {/if}
+                          </div>
+                          <div class="post_specific">
+                            <RichMarkdown md={summary} />
+                            <p class="post-meta"> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
+                          </div>
+                        </Cell>
+                      </li>
+                    {/each}
+                  </ul>
+                {/snippet}
+              </Pagination>
+            {/if}
+          </Cell>
     {/if}
   </div>
 </main>
 
- <style>
+<style>
  @reference "$tailcss";
 
  .auth {
@@ -165,8 +180,50 @@
    @apply flex flex-row justify-between;
  }
 
+ .post-link::after {
+   content: "";
+   @apply absolute inset-0;
+ }
+
+ .title-block :global(.heading) {
+   @apply mb-0;
+ }
+
+ .post-tags {
+   @apply flex flex-row flex-wrap gap-2 mt-1 mb-2;
+ }
+
+ .post-tag {
+   @apply relative z-50 text-sm text-(--color-bg) bg-(--color-accent) px-2 py-0.5 cursor-pointer hover:opacity-80;
+ }
+
+ .post-meta {
+   @apply mt-2 text-right;
+ }
+
  .post-actions {
-   @apply flex flex-row gap-2 z-50;
+   @apply flex flex-row gap-2 z-50 relative;
+ }
+
+ .post_specific {
+   @apply flex flex-col gap-1;
+ }
+
+ .posts-wrapper li :global(.cell) {
+   @apply transition-transform duration-200 ease-in-out;
+ }
+
+ .posts-wrapper li:hover :global(.cell),
+ .posts-wrapper li:focus-within :global(.cell) {
+   @apply -translate-y-0.5;
+ }
+
+ .post_specific :global(.rich-markdown) {
+   @apply text-sm my-0;
+ }
+
+ .post_specific :global(.rich-markdown p) {
+   @apply my-0;
  }
  
  .button-logout {
@@ -174,9 +231,6 @@
    @apply hover:cursor-pointer bg-(--color-error) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
  }
 
- .post_specific {
-   @apply flex flex-row justify-between;
- }
  
  .actions {
    @apply flex flex-row w-full gap-4 justify-center;

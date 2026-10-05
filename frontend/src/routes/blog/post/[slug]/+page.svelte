@@ -211,10 +211,24 @@
       <p class="absolute text-xs top-1"><Link href="/blog/" target="_self">{`<-`} Back to blog</Link></p>
       <Cell title="metadata">
         <Heading level="1">{post.title}</Heading>
-        <p class="">Slug: {post.slug}</p>
-        <p class="">Summary: {post.summary}</p>
-        <p> Tags: {post.tags.join(", ")} </p>
-        <p> Posted at: {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited at: {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
+        <dl class="post-meta">
+          <dt>Slug</dt>
+          <dd>{post.slug}</dd>
+          {#if post.summary}
+            <dt>Summary</dt>
+            <dd>{post.summary}</dd>
+          {/if}
+          {#if post.tags?.length}
+            <dt>Tags</dt>
+            <dd class="post-meta-tags">
+              {#each post.tags as tag}<span class="post-meta-tag">#{tag}</span>{/each}
+            </dd>
+          {/if}
+          <dt>Posted</dt>
+          <dd>{blog_api.convert_unix_timestamp_to_date(post.posted_at)}</dd>
+          <dt>Edited</dt>
+          <dd>{post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)}</dd>
+        </dl>
       </Cell>
       <Cell title="Content">
         <RichMarkdown render_images={true} md={post.content_markdown} />
@@ -297,6 +311,26 @@
 
  label {
    @apply flex flex-col text-xs text-(--color-accent);
+ }
+
+ .post-meta {
+   @apply grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm items-baseline;
+ }
+
+ .post-meta dt {
+   @apply text-xs uppercase tracking-wide text-(--color-subtext);
+ }
+
+ .post-meta dd {
+   @apply m-0;
+ }
+
+ .post-meta-tags {
+   @apply flex flex-row flex-wrap gap-2;
+ }
+
+ .post-meta-tag {
+   @apply text-xs text-(--color-bg) bg-(--color-accent) px-2 py-0.5;
  }
 
 </style>
