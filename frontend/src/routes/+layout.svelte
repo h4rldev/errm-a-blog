@@ -15,15 +15,6 @@
 <svelte:head>
   <link rel="icon" href="/favicon.ico" sizes="any" />
   <link rel="apple-touch-icon" href="/og.webp" />
-  <script>
-   (function() {
-     let theme = localStorage.getItem('theme');
-     if (!theme)
-       theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-     if (theme === 'dark')
-       document.documentElement.classList.add('dark');
-   })();
-  </script>
 </svelte:head>
 
 <Header />

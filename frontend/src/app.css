@@ -101,37 +101,56 @@
     .post-actions {
         @apply flex flex-row gap-2 z-50 justify-end;
     }
+
     .button-edit {
         @apply min-w-24 hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
     }
+
     .button-delete {
         @apply min-w-24 hover:cursor-pointer bg-(--color-error) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
     }
+
     .button-guestbook {
         @apply hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-2 px-4 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
     }
+
     .button-create-post {
         @apply min-w-24 hover:cursor-pointer bg-(--color-confirm) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
     }
+
     .form-container {
         @apply flex flex-col justify-center items-center font-arimo mb-4;
     }
+
     .guestbook-form {
         @apply flex flex-col gap-4 w-full max-w-2xl;
     }
+
     .title-and-meta {
-        @apply flex flex-row justify-between;
+        @apply grid grid-cols-3 items-baseline;
     }
+
+    .title-and-meta > :nth-child(2) {
+        @apply text-center;
+    }
+
+    .title-and-meta > :nth-child(3) {
+        @apply text-right;
+    }
+
     .login-form,
     .register-form {
         @apply flex flex-col gap-4 lg:w-1/3;
     }
+
     .auth-label {
         @apply flex flex-col text-xs text-(--color-accent);
     }
+
     .auth-input {
         @apply bg-(--color-bg) text-(--color-text) p-2 w-full active:border-(--color-accent) active:outline-none active:ring-(--color-accent) focus:border-(--color-accent) focus:outline-none focus:ring-(--color-accent);
     }
+
     .button-login,
     .button-register {
         @apply hover:cursor-pointer bg-(--color-accent) text-(--color-bg) font-bold py-2 px-4 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out;
@@ -143,44 +162,53 @@
     color: var(--color-overlay);
     font-style: italic;
 }
+
 .rich-markdown .hljs-keyword,
 .rich-markdown .hljs-selector-tag,
 .rich-markdown .hljs-literal,
 .rich-markdown .hljs-type {
     color: var(--color-accent);
 }
+
 .rich-markdown .hljs-string,
 .rich-markdown .hljs-regexp,
 .rich-markdown .hljs-addition {
     color: var(--color-confirm);
 }
+
 .rich-markdown .hljs-number,
 .rich-markdown .hljs-built_in,
 .rich-markdown .hljs-symbol {
     color: var(--color-link);
 }
+
 .rich-markdown .hljs-title,
 .rich-markdown .hljs-title.function_,
 .rich-markdown .hljs-section {
     color: var(--color-link);
     font-weight: bold;
 }
+
 .rich-markdown .hljs-attr,
 .rich-markdown .hljs-attribute,
 .rich-markdown .hljs-variable,
 .rich-markdown .hljs-template-variable {
     color: var(--color-error);
 }
+
 .rich-markdown .hljs-meta,
 .rich-markdown .hljs-doctag {
     color: var(--color-subtext);
 }
+
 .rich-markdown .hljs-deletion {
     color: var(--color-error);
 }
+
 .rich-markdown .hljs-emphasis {
     font-style: italic;
 }
+
 .rich-markdown .hljs-strong {
     font-weight: bold;
 }
