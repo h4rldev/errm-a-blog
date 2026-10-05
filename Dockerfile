@@ -42,7 +42,7 @@ RUN deno run -A npm:vite build
 
 FROM alpine:3.22 AS runtime
 RUN apk add --no-cache \
-      erlang28 sqlite-libs argon2-libs brotli ncurses-libs \
+      erlang28 sqlite-libs argon2-libs brotli ncurses-libs file \
       ca-certificates tini \
  && adduser -D -u 1000 -s /bin/sh app
 WORKDIR /app
