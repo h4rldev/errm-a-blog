@@ -27,6 +27,7 @@
    { src: "/badges/friends/at0m.gif", href: "https://at0m.firebomb.ing", alt: "at0m.firebomb.ing" },
    { src: "https://dane.gg/assets/img/buttons/88x31/button.gif", href: "https://dane.gg", alt: "dane.gg" },
    { src: "/badges/friends/jesx.gif", href: "https://anemoia.moe/", alt: "anemoia.moe" },
+   { src: "/badges/friends/doloro.avif", href: "https://doloro.co.uk", alt: "doloro.co.uk" },
  ];
 
  const random: Badge[] = [
