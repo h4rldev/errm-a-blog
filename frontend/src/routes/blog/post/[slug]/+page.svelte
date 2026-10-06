@@ -249,6 +249,11 @@
       <Cell title="Comments">
         <Cell title="Post A Comment">
           <div class="form-container">
+            {#if content}
+              <Cell title="Preview">
+                <RichMarkdown md={content ?? ""} />
+              </Cell>
+            {/if}
             <form onsubmit={handle_submit} class="guestbook-form">
               <label class="username">
                 USERNAME
@@ -274,23 +279,27 @@
                     <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(comment.posted_at)}</p>
                     <p class="text-xs">{comment.edited_at ? blog_api.convert_unix_timestamp_to_date(comment.edited_at) : "never"}</p>
                   </div>
-                  <RichMarkdown md={comment.content_markdown} />
-                  {#if is_admin}
-                    <div class="mt-4 flex justify-end">
-                      <ul class="post-actions">
-                        <li><button class="button-edit" onclick={() => start_edit_comment(comment)}>Edit</button></li>
-                        <li><button class="button-delete" onclick={() => delete_comment(comment)}>Delete</button></li>
-                      </ul>
-                    </div>
-                  {/if}
                   {#if editing_comment_id === comment.id}
-                    <form class="guestbook-form mt-4" onsubmit={(e) => { e.preventDefault(); save_edit_comment(comment); }}>
+                    <form class="guestbook-form mt-4 max-w-none" onsubmit={(e) => { e.preventDefault(); save_edit_comment(comment); }}>
+                      {#if edited_content}
+                        <RichMarkdown md={edited_content ?? ""} />
+                      {/if}
                       <textarea bind:value={edited_content}></textarea>
                       <div class="flex flex-row gap-2">
                         <button type="submit" class="button-edit">Save</button>
                         <button type="button" class="button-delete" onclick={cancel_edit_comment}>Cancel</button>
                       </div>
                     </form>
+                  {:else}
+                    <RichMarkdown md={comment.content_markdown} />
+                    {#if is_admin}
+                      <div class="mt-4 flex justify-end">
+                        <ul class="post-actions">
+                          <li><button class="button-edit" onclick={() => start_edit_comment(comment)}>Edit</button></li>
+                          <li><button class="button-delete" onclick={() => delete_comment(comment)}>Delete</button></li>
+                        </ul>
+                      </div>
+                    {/if}
                   {/if}
                 </Cell>
               </div>

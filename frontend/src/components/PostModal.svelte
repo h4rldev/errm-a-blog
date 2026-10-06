@@ -2,6 +2,7 @@
  import Cell from "$components/Cell.svelte";
  import Heading from "$components/Heading.svelte";
  import TagInput from "$components/TagInput.svelte";
+ import RichMarkdown from "$components/RichMarkdown.svelte";
 
  import { blog_api, type Post } from "$lib/blog_api";
 
@@ -114,6 +115,11 @@
 {#if show}
   <div class="modal-overlay">
     <div class="modal-content">
+      {#if form_data.content_markdown}
+        <Cell title="Preview">
+          <RichMarkdown md={form_data.content_markdown} render_images={true} />
+        </Cell>
+      {/if}
       <Cell title={is_editing ? "Edit post" : "Create post"}>
         <div class="form-container">
           <Heading level="2">{is_editing ? "Edit a post" : "Create a new post"}</Heading>
@@ -143,12 +149,14 @@
               <div> CONTENT (MARKDOWN) <span class="text-(--color-error)">*</span></div>
               <textarea id="post-content" name="content_markdown" bind:value={form_data.content_markdown} placeholder="Content" rows="6"></textarea>
             </label>
+
             <div>
               <label for="tag-input">
                 TAGS
               </label>
               <TagInput bind:tags={form_data.tags} id="tag-input" placeholder="Type to search or add tags..." />
             </div>
+
             <div class="actions">
               <button type="button" class="button-secondary" onclick={close_modal}>Cancel</button>
               <button type="submit" class="button-primary" disabled={is_submitting}>{is_submitting ? (is_editing ? "Editing..." : "Creating...") : (is_editing ? "Edit" : "Create")}</button>
