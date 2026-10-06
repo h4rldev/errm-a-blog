@@ -39,10 +39,12 @@ get() ->
     {get, ["api", "tags"]},
 
     {post, ["api", "guestbook"]},
+    {post, ["api", "guestbook", ':id', "vote"]},
+    {post, ["api", "post", ':post_id', "comments", ':comment_id', "vote"]},
     {post, ["api", "auth", "register"]},
     {post, ["api", "auth", "login"]},
-
     {post, ["api", "post", ':post_id', "comments"]},
+
     {get, ["ws"]}
   ],
 

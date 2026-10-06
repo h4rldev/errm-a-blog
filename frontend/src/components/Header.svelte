@@ -53,12 +53,16 @@
  .header-container {
    @apply lg:w-200 lg:max-w-200 md:w-180 md:max-w-180 xs:w-96 xs:max-w-96 w-82 max-w-82 flex flex-row items-end justify-between;
  }
-
+ 
  .navigation {
    @apply flex md:flex-row flex-col md:gap-4 font-arimo xl:text-left text-right;
  }
 
  .me-ascii {
-   @apply whitespace-pre-wrap font-mono xl:text-sm text-xs;
+   @apply whitespace-pre-wrap font-mono xl:text-sm text-xs text-(--color-accent);
+ }
+
+ :global(html.dark) .me-ascii {
+   text-shadow: 0 0 8px color-mix(in srgb, var(--color-accent) 55%, transparent);
  }
 </style>

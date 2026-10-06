@@ -3,6 +3,7 @@
  import Footer from "$components/Footer.svelte";
  import Header from "$components/Header.svelte";
  import Meta from "$components/Meta.svelte";
+ import AsciiBackground from "$components/AsciiBackground.svelte";
  import { theme } from "$lib/stores/theme.svelte";
 
  $effect(() => {
@@ -17,6 +18,7 @@
   <link rel="apple-touch-icon" href="/og.webp" />
 </svelte:head>
 
+<AsciiBackground />
 <Header />
 {@render children()}
 <Footer />

@@ -40,12 +40,14 @@ export interface PostsResponse {
 }
 
 export interface PostGuestbookEntry {
+  parent_id?: number | null;
   username: string | "anonymous";
   content_markdown: string;
 }
 
 export interface GuestbookEntry extends PostGuestbookEntry {
   id: number;
+  votes: number;
   posted_at: number;
   edited_at: number | null;
 }
@@ -106,6 +108,8 @@ export interface RotateRegisterToken {
 
 export const normalize_entry = (e: any): GuestbookEntry => ({
   id: Number(e.id),
+  votes: Number(e.votes ?? 0),
+  parent_id: e.parent_id == null ? null : Number(e.parent_id),
   username: e.username,
   content_markdown: e.content_markdown,
   posted_at: Number(e.posted_at),
@@ -207,6 +211,16 @@ export const blog_api = {
       "DELETE",
       comment,
     ),
+  vote_comment: (
+    post_id: number,
+    comment_id: number,
+  ): Promise<{ votes: number }> =>
+    request<{ votes: number }>(
+      `/api/post/${post_id}/comments/${comment_id}/vote`,
+      "POST",
+    ),
+  vote_guestbook_entry: (id: number): Promise<{ votes: number }> =>
+    request<{ votes: number }>(`/api/guestbook/${id}/vote`, "POST"),
 
   admin_get_stats: () => request<Stats>("/api/admin/stats", "GET"),
   admin_get_register_token: () =>

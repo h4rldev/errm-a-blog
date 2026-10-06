@@ -62,7 +62,9 @@ format_entry(Entry) ->
     <<"username">> => value_to_binary(maps:get("username", Entry, undefined)),
     <<"content_markdown">> => value_to_binary(maps:get("content_markdown", Entry, undefined)),
     <<"posted_at">> => maps:get("posted_at", Entry, undefined),
-    <<"edited_at">> => maps:get("edited_at", Entry, undefined)
+    <<"edited_at">> => maps:get("edited_at", Entry, undefined),
+    <<"votes">> => maps:get("votes", Entry, 0),
+    <<"parent_id">> => value_to_binary(maps:get("parent_id", Entry, undefined))
   }.
 
 format_notification(Row) ->

@@ -172,7 +172,7 @@
  @reference "$tailcss";
 
  .modal-overlay {
-   @apply bg-(--color-bg) transition-opacity duration-200 ease-in-out z-999;
+   @apply transition-opacity duration-200 ease-in-out z-999;
  }
 
  .post-form {

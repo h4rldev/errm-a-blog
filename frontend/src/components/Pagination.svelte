@@ -1,13 +1,15 @@
 <script lang="ts" generics="T">
  import type { Snippet } from "svelte";
+ import Cell from "$components/Cell.svelte";
 
  let {
    items,
-   per_page = $bindable(20),
+   per_page = $bindable(5),
    order = $bindable<"newest" | "oldest">("newest"),
    page = $bindable(1),
    search = $bindable(""),
    filter,
+   split = false,
    children,
  }: {
    items: T[];
@@ -16,10 +18,11 @@
    page?: number;
    search?: string;
    filter?: (item: T, query: string) => boolean;
+   split?: boolean;
    children: Snippet<[T[]]>;
  } = $props();
 
- const sizes = [20, 40, 80, 0];
+ const sizes = [5, 10, 15, 20, 40, 80, 0];
 
  const filtered = $derived(
    search.trim() === ""
@@ -60,33 +63,33 @@
  }
 </script>
 
-<div class="pagination">
-  <input
-    type="search"
-    class="pagination-search"
-    placeholder="Search..."
-    bind:value={search}
-  />
-  <label>
-    SHOW
-    <select bind:value={per_page}>
-      {#each sizes as s}
-        <option value={s}>{s === 0 ? "All" : s}</option>
-      {/each}
-    </select>
-  </label>
-  <label>
-    ORDER
-    <select bind:value={order}>
-      <option value="newest">Newest first</option>
-      <option value="oldest">Oldest first</option>
-    </select>
-  </label>
-</div>
+{#snippet controls()}
+  <div class="pagination">
+    <input
+      type="search"
+      class="pagination-search"
+      placeholder="Search..."
+      bind:value={search}
+    />
+    <label>
+      SHOW
+      <select bind:value={per_page}>
+        {#each sizes as s}
+          <option value={s}>{s === 0 ? "All" : s}</option>
+        {/each}
+      </select>
+    </label>
+    <label>
+      ORDER
+      <select bind:value={order}>
+        <option value="newest">Newest first</option>
+        <option value="oldest">Oldest first</option>
+      </select>
+    </label>
+  </div>
+{/snippet}
 
-{@render children(visible)}
-
-{#if page_count > 1}
+{#snippet page_controls()}
   <div class="pagination-controls">
     <button type="button" disabled={page === 1} onclick={() => page--}>Prev</button>
     {#each pages as p}
@@ -94,6 +97,22 @@
     {/each}
     <button type="button" disabled={page === page_count} onclick={() => page++}>Next</button>
   </div>
+{/snippet}
+
+{#if split}
+  <Cell title="Search">{@render controls()}</Cell>
+{:else}
+  {@render controls()}
+{/if}
+
+{@render children(visible)}
+
+{#if page_count > 1}
+  {#if split}
+    <Cell title="Pages">{@render page_controls()}</Cell>
+  {:else}
+    {@render page_controls()}
+  {/if}
 {/if}
 
 <style>
@@ -116,11 +135,11 @@
  }
 
  .pagination-controls {
-   @apply flex flex-row gap-1 mt-4 flex-wrap;
+   @apply flex flex-row flex-wrap items-center justify-center gap-2 w-full;
  }
 
  .pagination-controls button {
-   @apply px-2 py-1 border border-(--color-overlay) text-(--color-text) text-xs;
+   @apply min-w-12 px-3 py-2 border border-(--color-overlay) text-(--color-text) text-sm cursor-pointer transition-colors duration-150 hover:border-(--color-accent) disabled:cursor-default;
  }
 
  .pagination-controls button.active {

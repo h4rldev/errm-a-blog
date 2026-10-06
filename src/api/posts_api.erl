@@ -212,13 +212,22 @@ insert_post(UserId, Title, Slug, Summary, ContentMarkdown, Tags) ->
     {ok, Db} ->
       Now = erlang:system_time(second),
       Sql = "INSERT INTO posts (slug, title, summary, content_markdown, author_id, tags, posted_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
-      case errm_sqlite:query(Db, Sql, [Slug, Title, Summary, ContentMarkdown, UserId, Tags, Now]) of
+      Result = 
+        try errm_sqlite:query(Db, Sql, [Slug, Title, Summary, ContentMarkdown, UserId, Tags, Now])
+        catch throw:{error, Reason1} -> {error, Reason1}
+      end,
+      case Result of
         {ok, _} ->
           {ok, LastId} = errm_sqlite_nif:last_insert_rowid(Db),
           response_utils:ok(#{message => <<"Post created successfully">>, id => LastId});
-        {error, Reason1} ->
-          logger:error("Error creating post: ~p", [Reason1]),
-          response_utils:error(500, "Couldn't create post due to database error")
+        {error, Reason2} ->
+          case is_duplicate_slug(Reason2) of
+            true ->
+              response_utils:error(409, <<"Post with slug '", Slug/binary, "' already exists">>);
+            false ->
+              logger:error("Error creating post: ~p", [Reason2]),
+              response_utils:error(500, "Couldn't create post due to database error")
+          end
       end
   end.
 
@@ -243,12 +252,21 @@ sql_update_post(UserId, Identifier, Title, Slug, Summary, ContentMarkdown, Tags)
       end,
       Sql = "UPDATE posts SET title = ?, slug = ?, summary = ?, content_markdown = ?, tags = ?, edited_at = ? WHERE " ++ Where ++ " AND author_id = ?",
       Params = [Title, Slug, Summary, ContentMarkdown, Tags, Now] ++ WhereArgs ++ [UserId],
-      case errm_sqlite:query(Db, Sql, Params) of
+      Result = 
+        try errm_sqlite:query(Db, Sql, Params)
+        catch throw:{error, Reason1} -> {error, Reason1}
+      end,
+      case Result of
         {ok, []} ->
           fetch_post(Identifier);
-        {error, Reason1} ->
-          logger:error("Error updating post: ~p", [Reason1]),
-          response_utils:error(500, "Couldn't update post due to database error");
+        {error, Reason2} ->
+          case is_duplicate_slug(Reason2) of
+            true ->
+              response_utils:error(409, <<"Post with slug '", Slug/binary, "' already exists">>);
+            false ->
+              logger:error("Error updating post: ~p", [Reason2]),
+              response_utils:error(500, "Couldn't update post due to database error")
+          end;
         _ -> response_utils:error(500, "Couldn't find post to update")
       end
   end.
@@ -275,6 +293,11 @@ sql_delete_post(UserId, Identifier) ->
         _ -> response_utils:error(500, "Couldn't find post to delete")
       end
   end.
+
+is_duplicate_slug(Reason) when is_list(Reason); is_binary(Reason) ->
+  binary:match(blog_format:value_to_binary(Reason), <<"UNIQUE constraint failed: posts.slug">>) =/= nomatch;
+is_duplicate_slug(_) ->
+  false.
 
 to_int(N) when is_integer(N) ->
   N;

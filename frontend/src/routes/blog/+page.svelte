@@ -21,7 +21,7 @@
  let post_to_edit = $state<Post | null>(null);
  let search = $state<string>("");
  
- let per_page = $state(20);
+ let per_page = $state(5);
  let order = $state<"newest" | "oldest">("newest");
  let page = $state(1);
 
@@ -105,58 +105,56 @@
     {:else if show_edit_modal}
         <PostModal show={show_edit_modal} on_close={() => { show_edit_modal = false; }} on_saved={() => { load(); }} post_id={post_to_edit?.id} post_slug={post_to_edit?.slug} />
     {:else}
-          <Cell title="Posts">
-            {#if loading}
-              <p>Loading...</p>
-            {:else if error}
-              <p class="text-(--color-error)">{error}</p>
-            {:else if posts.length === 0}
-              <p>No posts available</p>
-            {:else}
-              <Pagination items={posts} bind:per_page bind:order bind:page bind:search filter={post_filter}>
-                {#snippet children(visible)}
-                  <ul>
-                    {#each visible as post}
-                      {@const identifier = post.slug === "" ? post.id : post.slug}
-                      {@const raw_summary = post.summary?.trim() || post.content_markdown || ""}
-                      {@const summary = raw_summary.length > 200 ? raw_summary.slice(0, 200) + "..." : raw_summary}
-                      <li>
-                        <Cell title="Post">
-                          <div class="title-and-actions">
-                            <div class="title-block">
-                              <a href="/blog/post/{identifier}/" class="post-link" target="_self">
-                                <Heading level="3">
-                                  <span class="title">{post.title}</span>
-                                </Heading>
-                              </a>
-                              {#if post.tags?.length}
-                                <ul class="post-tags">
-                                  {#each post.tags as tag}
-                                    <li><button type="button" class="post-tag" onclick={() => { search = tag; }}>#{tag}</button></li>
-                                  {/each}
-                                </ul>
-                              {/if}
-                            </div>
-
-                            {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
-                              <ul class="post-actions mt-1">
-                                <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
-                                <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
+          {#if loading}
+            <Cell title="Posts"><p>Loading...</p></Cell>
+          {:else if error}
+            <Cell title="Posts"><p class="text-(--color-error)">{error}</p></Cell>
+          {:else if posts.length === 0}
+            <Cell title="Posts"><p>No posts available</p></Cell>
+          {:else}
+            <Pagination split items={posts} bind:per_page bind:order bind:page bind:search filter={post_filter}>
+              {#snippet children(visible)}
+                <ul>
+                  {#each visible as post}
+                    {@const identifier = post.slug === "" ? post.id : post.slug}
+                    {@const raw_summary = post.summary?.trim() || post.content_markdown || ""}
+                    {@const summary = raw_summary.length > 200 ? raw_summary.slice(0, 200) + "..." : raw_summary}
+                    <li>
+                      <Cell title="Post">
+                        <div class="title-and-actions">
+                          <div class="title-block">
+                            <a href="/blog/post/{identifier}/" class="post-link" target="_self">
+                              <Heading level="3">
+                                <span class="title">{post.title}</span>
+                              </Heading>
+                            </a>
+                            {#if post.tags?.length}
+                              <ul class="post-tags">
+                                {#each post.tags as tag}
+                                  <li><button type="button" class="post-tag" onclick={() => { search = tag; }}>#{tag}</button></li>
+                                {/each}
                               </ul>
                             {/if}
                           </div>
-                          <div class="post_specific">
-                            <RichMarkdown md={summary} />
-                            <p class="post-meta"> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
-                          </div>
-                        </Cell>
-                      </li>
-                    {/each}
-                  </ul>
-                {/snippet}
-              </Pagination>
-            {/if}
-          </Cell>
+
+                          {#if post.author.uuid === blog.user?.uuid || blog.user?.role.includes("admin")}
+                            <ul class="post-actions mt-1">
+                              <li><button class="button-edit" onclick={() => { show_edit_modal = !show_edit_modal; post_to_edit = post; }}>Edit</button></li>
+                              <li><button class="button-delete" onclick={() => {delete_post(post)}}>Delete</button></li>
+                            </ul>
+                          {/if}
+                        </div>
+                        <div class="post_specific">
+                          <RichMarkdown md={summary} />
+                          <p class="post-meta"> by {post.author.username} at {blog_api.convert_unix_timestamp_to_date(post.posted_at)}, edited {post.edited_at === null ? "never" : blog_api.convert_unix_timestamp_to_date(post.edited_at)} </p>
+                        </div>
+                      </Cell>
+                    </li>
+                  {/each}
+                </ul>
+              {/snippet}
+            </Pagination>
+          {/if}
     {/if}
   </div>
 </main>
@@ -213,8 +211,8 @@
    @apply transition-transform duration-200 ease-in-out;
  }
 
- .posts-wrapper li:hover :global(.cell),
- .posts-wrapper li:focus-within :global(.cell) {
+ .posts-wrapper li :global(.cell):hover,
+ .posts-wrapper li :global(.cell):focus-within {
    @apply -translate-y-0.5;
  }
 
@@ -237,7 +235,7 @@
  }
 
  .actions > ul {
-   @apply flex flex-row justify-between w-full mt-2;
+   @apply flex flex-col items-center gap-2 mt-2 w-full sm:flex-row sm:justify-between;
  }
 
 </style>

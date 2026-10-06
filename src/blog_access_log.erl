@@ -19,7 +19,7 @@ middleware() ->
           string:uppercase(atom_to_binary(maps:get(method, Req, get), utf8)),
           maps:get(raw_path, Req, <<"/">>),
           status_of(Result),
-          peer_ip(Req),
+          blog_ip:client_ip(Req),
           Duration
         ]),
         write(File, Line),
@@ -40,18 +40,6 @@ write(File, Line) ->
       end;
     EncodingError ->
       logger:error("Failed to encode access log line: ~p", [EncodingError])
-  end.
-
--spec peer_ip(errm_http:request()) -> string().
-peer_ip(Req) ->
-  case maps:get(peer, Req, undefined) of
-    {IP, _Port} ->
-      case inet:ntoa(IP) of
-        {error, _} -> "-";
-        Str -> Str
-      end;
-    _ ->
-      "-"
   end.
 
 -spec status_of(term()) -> integer() | atom().

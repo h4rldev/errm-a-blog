@@ -1,5 +1,5 @@
 -module (guestbook_api).
--export ([create_guestbook_entry/1, delete_guestbook_entry/1, update_guestbook_entry/1]).
+-export ([create_guestbook_entry/1, delete_guestbook_entry/1, update_guestbook_entry/1, vote_guestbook_entry/1]).
 
 -spec create_guestbook_entry(errm_http:request()) -> {ok, errm_http:response()}.
 create_guestbook_entry(Req) ->
@@ -20,7 +20,7 @@ delete_guestbook_entry(Req) ->
       case string:to_integer(binary_to_list(IdBin)) of
         {IntId, []} when is_integer(IntId) ->
           case blog_middlewares:is_admin(Req) of
-            true -> 
+            true ->
               {Username, Content} = blog_notifications:delete_identity(Req),
               sql_delete_guestbook_entry(IntId, Username, Content);
             false -> response_utils:error(401, "Unauthorized")
@@ -37,7 +37,7 @@ update_guestbook_entry(Req) ->
       response_utils:error(400, "No id provided");
     IdBin when is_binary(IdBin) ->
       case string:to_integer(binary_to_list(IdBin)) of
-        {IntId, []} when is_integer(IntId) -> 
+        {IntId, []} when is_integer(IntId) ->
           case blog_middlewares:is_admin(Req) of
             true -> handle_update(Req, IntId);
             false -> response_utils:error(401, "Unauthorized")
@@ -47,6 +47,19 @@ update_guestbook_entry(Req) ->
       end
   end.
 
+-spec vote_guestbook_entry(errm_http:request()) -> {ok, errm_http:response()}.
+vote_guestbook_entry(Req) ->
+  Params = maps:get(params, Req, #{}),
+  case maps:get(<<"id">>, Params, undefined) of
+    undefined ->
+      response_utils:error(400, "No id provided");
+    IdBin when is_binary(IdBin) ->
+      case string:to_integer(binary_to_list(IdBin)) of
+        {IntId, []} when is_integer(IntId) ->
+          sql_vote_guestbook_entry(IntId, blog_ip:client_ip(Req));
+        _ -> response_utils:error(400, "Invalid id")
+      end
+  end.
 
 validate_guestbook_entry_request(Req) ->
   case maps:get(headers, Req, #{}) of
@@ -103,6 +116,7 @@ sql_delete_guestbook_entry(EntryId, Username, Content) ->
       logger:error("Database open failed: ~p", [Reason]),
       response_utils:error(500, "Database error");
     {ok, Db} ->
+      {ok, _} = errm_sqlite:exec(Db, "DELETE FROM guestbook_votes WHERE entry_id = ?", [EntryId]),
       Sql = "DELETE FROM guestbook_entries WHERE id = ?",
       Params = [EntryId],
       case errm_sqlite:query(Db, Sql, Params) of
@@ -146,6 +160,42 @@ sql_update_guestbook_entry(EntryId, Username, ContentMarkdown) ->
       end
   end.
 
+sql_vote_guestbook_entry(EntryId, Ip) ->
+  case blog_db:db() of
+    {error, Reason} ->
+      logger:error("Database open failed: ~p", [Reason]),
+      response_utils:error(500, "Database error");
+    {ok, Db} ->
+      case errm_sqlite:query(Db, "SELECT id FROM guestbook_entries WHERE id = ? LIMIT 1", [EntryId]) of
+        {ok, []} ->
+          response_utils:error(404, "Guestbook entry not found");
+        {ok, _} ->
+          case errm_sqlite:exec(Db, "INSERT OR IGNORE INTO guestbook_votes (entry_id, ip) VALUES (?, ?)", [EntryId, Ip]) of
+            {ok, 1} ->
+              {ok, _} = errm_sqlite:exec(Db, "UPDATE guestbook_entries SET votes = votes + 1 WHERE id = ?", [EntryId]),
+              guestbook_vote_response(Db, EntryId);
+            {ok, 0} ->
+              guestbook_vote_response(Db, EntryId);
+            {error, Reason1} ->
+              logger:error("Error voting guestbook entry: ~p", [Reason1]),
+              response_utils:error(500, "Couldn't vote due to database error")
+          end;
+        {error, Reason1} ->
+          logger:error("Error fetching guestbook entry: ~p", [Reason1]),
+          response_utils:error(500, "Database error")
+      end
+  end.
+
+guestbook_vote_response(Db, EntryId) ->
+  case errm_sqlite:query(Db, "SELECT votes FROM guestbook_entries WHERE id = ?", [EntryId]) of
+    {ok, [Row | _]} ->
+      Votes = votes_of(Row),
+      blog_ws_broadcast:guestbook_vote(integer_to_binary(EntryId), Votes),
+      response_utils:ok(#{votes => Votes});
+    _ ->
+      response_utils:error(500, "Database error")
+  end.
+
 validate_lengths(U, C) when is_binary(U), is_binary(C) ->
   case string:length(U) > 32 of
     true -> {error, 400, "Username too long (max 32 characters)"};
@@ -154,4 +204,10 @@ validate_lengths(U, C) when is_binary(U), is_binary(C) ->
         true -> {error, 400, "Content too long (max 800 characters)"};
         false -> {ok, U, C}
       end
+  end.
+
+votes_of(Row) ->
+  case maps:get("votes", Row, 0) of
+    V when is_integer(V) -> V;
+    _ -> 0
   end.

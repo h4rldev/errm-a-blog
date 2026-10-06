@@ -28,10 +28,12 @@ get() ->
 
     {post, ["api", "post", ":post_id", "comments"], fun comments_api:create_comment/1},
     {put, ["api", "post", ":post_id", "comments", ":comment_id"], fun comments_api:edit_comment/1},
+    {post, ["api", "post", ":post_id", "comments", ":comment_id", "vote"], fun comments_api:vote_comment/1},
     {delete, ["api", "post", ":post_id", "comments", ":comment_id"], fun comments_api:delete_comment/1},
 
     {post, ["api", "guestbook"], fun guestbook_api:create_guestbook_entry/1},
     {put, ["api", "guestbook", ":id"], fun guestbook_api:update_guestbook_entry/1},
+    {post, ["api", "guestbook", ":id", "vote"], fun guestbook_api:vote_guestbook_entry/1},
     {delete, ["api", "guestbook", ":id"], fun guestbook_api:delete_guestbook_entry/1},
 
     {get, ["api", "tags"], fun posts_api:get_tags/1},

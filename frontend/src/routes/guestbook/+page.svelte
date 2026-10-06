@@ -15,7 +15,7 @@
  import { blog } from "$lib/blog.svelte";
  import Pagination from "$components/Pagination.svelte";
 
- let per_page = $state(20);
+ let per_page = $state(5);
  let order = $state<"newest" | "oldest">("newest");
  let page = $state(1);
  let pagination: Pagination<GuestbookEntry> | undefined = $state(undefined);
@@ -57,7 +57,13 @@
      content_markdown: entry.content_markdown,
    });
  };
- 
+
+ const vote_entry = async (entry: GuestbookEntry) => {
+   try {
+     const res = await blog_api.vote_guestbook_entry(entry.id);
+     entries = entries.map((e) => (e.id === entry.id ? { ...e, votes: res.votes } : e));
+   } catch {}
+ };
 
  onMount(() => {
    blog.check();
@@ -94,6 +100,9 @@
        case "guestbook:deleted":
 	 entries = entries.filter((e) => e.id !== Number(msg.id));
 	 break;
+       case "guestbook:voted":
+         entries = entries.map((e) => (e.id === Number(msg.id) ? { ...e, votes: Number(msg.votes) } : e));
+         break;
        default:
          break;
      }
@@ -149,71 +158,84 @@
 <Meta title="Guestbook!" path="/guestbook/" />
 <main>
   <Cell title="guestbook">
-    <Cell title="Add a new entry">
-      <div class="form-container">
-        <Heading level="2">Add a new entry!</Heading>
-        {#if content}
-          <Cell title="Preview">
-            <RichMarkdown md={content ?? ""} />
-          </Cell>
-        {/if}
-        <form onsubmit={handle_submit} class="guestbook-form">
-          <label class="username">
-            USERNAME
-            <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" maxlength="32" />
-          </label>
-          <label class="content">
-            CONTENT (MARKDOWN)
-            <textarea bind:value={content} name="content" placeholder="Write something..." maxlength="800"></textarea>
-          </label>
-          <button type="submit" class="button-guestbook" disabled={loading}>
-            {loading ? 'Loading...' : 'Submit'}
-          </button>
-        </form>
-      </div>
-    </Cell>
-
-    <Cell title="Entries">
-      <Pagination bind:this={pagination} items={entries} bind:per_page bind:order bind:page>
-        {#snippet children(visible)}
-          {#each visible as entry}
-            <div id={`entry-${entry.id}`}>
-              <Cell title="Entry">
-                <div class="title-and-meta">
-                  <p class="font-bold">{entry.username}</p>
-                  <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(entry.posted_at)}</p>
-                  <p class="text-xs">{entry.edited_at ? blog_api.convert_unix_timestamp_to_date(entry.edited_at) : "never"}</p>
-                </div>
-                {#if editing_entry_id === entry.id}
-                  <form class="guestbook-form mt-4 max-w-none"
-                        onsubmit={(e) => { e.preventDefault(); save_edit(entry); }}>
-                    {#if edited_content}
-                      <RichMarkdown md={edited_content ?? ""} />
-                    {/if}
-                    <textarea bind:value={edited_content}></textarea>
-                    <div class="flex flex-row gap-2">
-                      <button type="submit" class="button-edit">Save</button>
-                      <button type="button" class="button-delete" onclick={cancel_edit}>Cancel</button>
-                    </div>
-                  </form>
-                {:else}
-                  <RichMarkdown md={entry.content_markdown} />
-                  {#if is_admin}
-                    <div class="mt-4 flex justify-end">
-                      <ul class="post-actions">
-                        <li><button class="button-edit" onclick={() => start_edit(entry)}>Edit</button></li>
-                        <li><button class="button-delete" onclick={() => delete_entry(entry)}>Delete</button></li>
-                      </ul>
-                    </div>
-                  {/if}
-                {/if}
-              </Cell>
-            </div>
-          {/each}
-        {/snippet}
-      </Pagination>
-    </Cell>
+    <Heading level="4">
+      Guestbook!
+    </Heading>
+    <p class="mb-2">
+      Public wall where you can say hi, your thoughts about the website, or self advertise!
+    </p>
+    <p> A couple rules are as follows: </p>
+    <ul class="rules">
+      <li>No extreme profanity</li>
+      <li>No malicious links</li>
+      <li>Keep links and content SFW</li>
+      <li>Keep it civil</li>
+    </ul>
   </Cell>
+
+  <Cell title="Add a new entry">
+    <div class="form-container">
+      <Heading level="2">Add a new entry!</Heading>
+      {#if content}
+        <Cell title="Preview">
+          <RichMarkdown md={content ?? ""} />
+        </Cell>
+      {/if}
+      <form onsubmit={handle_submit} class="guestbook-form">
+        <label class="username">
+          USERNAME
+          <input type="text" name="username" bind:value={username} autocomplete="username" placeholder="Anonymous" maxlength="32" />
+        </label>
+        <label class="content">
+          CONTENT (MARKDOWN)
+          <textarea bind:value={content} name="content" placeholder="Write something..." maxlength="800"></textarea>
+        </label>
+        <button type="submit" class="button-guestbook" disabled={loading}>
+          {loading ? 'Loading...' : 'Submit'}
+        </button>
+      </form>
+    </div>
+  </Cell>
+
+  <Pagination split bind:this={pagination} items={entries} bind:per_page bind:order bind:page>
+    {#snippet children(visible)}
+      {#each visible as entry}
+        <div id={`entry-${entry.id}`}>
+          <Cell title="Entry">
+            <div class="title-and-meta">
+              <p class="font-bold">{entry.username}</p>
+              <p class="text-xs">{blog_api.convert_unix_timestamp_to_date(entry.posted_at)}</p>
+              <p class="text-xs">{entry.edited_at ? blog_api.convert_unix_timestamp_to_date(entry.edited_at) : "never"}</p>
+            </div>
+            {#if editing_entry_id === entry.id}
+              <form class="guestbook-form mt-4 max-w-none"
+                    onsubmit={(e) => { e.preventDefault(); save_edit(entry); }}>
+                {#if edited_content}
+                  <RichMarkdown md={edited_content ?? ""} />
+                {/if}
+                <textarea bind:value={edited_content}></textarea>
+                <div class="flex flex-row gap-2">
+                  <button type="submit" class="button-edit">Save</button>
+                  <button type="button" class="button-delete" onclick={cancel_edit}>Cancel</button>
+                </div>
+              </form>
+            {:else}
+              <RichMarkdown md={entry.content_markdown} />
+              <div class="mt-4 flex flex-row items-center justify-between gap-2">
+                <button class="button-vote" onclick={() => vote_entry(entry)}>▲ {entry.votes ?? 0}</button>
+                {#if is_admin}
+                  <ul class="post-actions">
+                    <li><button class="button-edit" onclick={() => start_edit(entry)}>Edit</button></li>
+                    <li><button class="button-delete" onclick={() => delete_entry(entry)}>Delete</button></li>
+                  </ul>
+                {/if}
+              </div>
+            {/if}
+          </Cell>
+        </div>
+      {/each}
+    {/snippet}
+  </Pagination>
 </main>
 
 <style>
@@ -225,5 +247,9 @@
 
  label {
    @apply flex flex-col text-xs text-(--color-accent);
+ }
+
+ .rules {
+   @apply list-disc list-inside ml-2;
  }
 </style>

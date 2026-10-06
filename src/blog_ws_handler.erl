@@ -25,7 +25,7 @@ handle_text(Data, State = #{ws_state := #{user_id := UserId}, channels := Channe
           logger:error("[ws]: Failed to fetch guestbook: ~p", [Reason]),
           {ok, State};
         {ok, Db} ->
-          case errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, edited_at FROM guestbook_entries ORDER BY posted_at DESC") of
+          case errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, edited_at, votes FROM guestbook_entries ORDER BY posted_at DESC") of
             {ok, Rows} ->
               Payload = errm_json:to_binary(#{<<"event">> => <<"guestbook:initial">>, <<"entries">> => blog_format:format_entries(Rows)}),
               errm_ws:send_text(self(), Payload),
@@ -41,7 +41,7 @@ handle_text(Data, State = #{ws_state := #{user_id := UserId}, channels := Channe
           logger:error("[ws]: Failed to fetch post comments: ~p", [Reason]),
           {ok, State};
         {ok, Db} ->
-          case errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, edited_at FROM post_comments WHERE post_id = ? ORDER BY posted_at DESC", [PostId]) of
+          case errm_sqlite:query(Db, "SELECT id, username, content_markdown, posted_at, edited_at, votes, parent_id FROM post_comments WHERE post_id = ? ORDER BY posted_at DESC", [PostId]) of
             {ok, Rows} ->
               Payload = errm_json:to_binary(#{<<"event">> => <<"post_comments:initial">>, <<"comments">> => blog_format:format_comments(Rows)}),
               errm_ws:send_text(self(), Payload),
