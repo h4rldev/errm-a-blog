@@ -102,25 +102,38 @@
  .pagination {
    @apply flex flex-row flex-wrap gap-4 items-center my-4;
  }
+
  .pagination-search {
    @apply grow basis-full sm:basis-0 bg-(--color-bg) text-(--color-text) text-sm border border-(--color-overlay) py-1 px-2 focus:border-(--color-accent) focus:outline-none;
  }
+
  .pagination label {
    @apply flex flex-row items-center gap-2 text-sm text-(--color-accent);
  }
+
  .pagination select {
    @apply appearance-none bg-(--color-bg) text-(--color-text) text-sm border border-(--color-overlay) py-1 pl-2 pr-8 focus:border-(--color-accent) focus:outline-none;
  }
+
  .pagination-controls {
    @apply flex flex-row gap-1 mt-4 flex-wrap;
  }
+
  .pagination-controls button {
    @apply px-2 py-1 border border-(--color-overlay) text-(--color-text) text-xs;
  }
+
  .pagination-controls button.active {
    @apply bg-(--color-accent) text-(--color-bg);
  }
+
  .pagination-controls button:disabled {
    @apply opacity-40;
+ }
+
+ .pagination-search:focus,
+ .pagination-search:focus-visible {
+   outline: none;
+   box-shadow: none;
  }
 </style>
