@@ -150,7 +150,7 @@
  }
 
  .lb-layout {
-   @apply flex flex-col sm:flex-row items-stretch gap-4 sm:gap-0 w-full;
+   @apply flex flex-col sm:grid sm:grid-cols-2 items-stretch gap-4 sm:gap-0 w-full;
  }
 
  .lb-recent {
