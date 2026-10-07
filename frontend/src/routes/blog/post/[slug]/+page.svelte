@@ -27,6 +27,7 @@
  let comments = $state<Comment[]>([]);
  let ws_open = $state<boolean>(false);
  let subscribed_post_id: number | undefined = undefined;
+ let reconnect_timer: ReturnType<typeof setTimeout> | undefined;
 
  let username = $state<string | undefined>(undefined);
  let content = $state<string | undefined>(undefined);
@@ -173,32 +174,32 @@
    }
  };
 
- onMount(() => {
-   blog.check();
-
-   ws = new WebSocket(ws_url);
-   ws!.onopen = () => {
+ const connect = () => {
+   const socket = new WebSocket(ws_url);
+   ws = socket;
+   socket.onopen = () => {
      ws_open = true;
      subscribed_post_id = undefined;
    };
-
-   ws!.onclose = () => {
+   socket.onclose = () => {
      ws_open = false;
+     subscribed_post_id = undefined;
+     reconnect_timer = setTimeout(connect, 1000);
    };
 
-   ws!.onmessage = (e) => {
+   socket.onmessage = (e) => {
      const msg = JSON.parse(e.data);
      switch (msg.event) {
        case "post_comments:initial":
          comments = msg.comments.map(normalize_comment);
          break;
        case "post_comments:new":
-       	 {
-	   const comment = normalize_comment(msg);
-	   if (!comments.some((c) => c.id === comment.id)) {
-	     comments = [...comments, comment];
-	   }
-	 }
+         {
+           const comment = normalize_comment(msg);
+           if (!comments.some((c) => c.id === comment.id)) {
+             comments = [...comments, comment];
+           }
+         }
          break;
        case "post_comments:edited":
          comments = comments.map((comment) =>
@@ -215,6 +216,11 @@
          break;
      }
    };
+ };
+
+ onMount(() => {
+   blog.check();
+   connect();
  });
 
  $effect(() => {
@@ -226,6 +232,7 @@
  });
  
  onDestroy(() => {
+   clearTimeout(reconnect_timer);
    ws?.close();
  });
  

@@ -28,6 +28,7 @@
  let error = $state<string | null>(null);
  let ws_open = $state<boolean>(false);
  let subscribed = false;
+ let reconnect_timer: ReturnType<typeof setTimeout> | undefined;
  let editing_entry_id = $state<number | undefined>(undefined);
  let edited_content = $state<string>("");
  const is_admin = $derived(blog.user?.role.includes("admin") ?? false);
@@ -65,41 +66,43 @@
    } catch {}
  };
 
- onMount(() => {
-   blog.check();
-   ws = new WebSocket(ws_url);
-   ws!.onopen = () => {
+ const connect = () => {
+   const socket = new WebSocket(ws_url);
+   ws = socket;
+   socket.onopen = () => {
      ws_open = true;
      subscribed = false;
    };
-   ws!.onclose = () => {
+   socket.onclose = () => {
      ws_open = false;
+     subscribed = false;
+     reconnect_timer = setTimeout(connect, 1000);
    };
 
-   ws!.onmessage = (e) => {
+   socket.onmessage = (e) => {
      const msg = JSON.parse(e.data);
      switch (msg.event) {
        case "guestbook:initial":
-	 entries = msg.entries.map(normalize_entry);
-	 break;
+         entries = msg.entries.map(normalize_entry);
+         break;
        case "guestbook:new":
-	 {
-	   const entry = normalize_entry(msg);
-	   if (!entries.some((e) => e.id === entry.id)) {
-	     entries = [...entries, entry];
-	   }
-	 }
-	 break;
+         {
+           const entry = normalize_entry(msg);
+           if (!entries.some((e) => e.id === entry.id)) {
+             entries = [...entries, entry];
+           }
+         }
+         break;
        case "guestbook:edited":
-	 entries = entries.map((e) =>
-	   e.id === Number(msg.id)
-	   ? { ...e, content_markdown: msg.content_markdown, edited_at: Number(msg.edited_at) }
-	   : e,
-	 );
-	 break;
+         entries = entries.map((e) =>
+           e.id === Number(msg.id)
+             ? { ...e, content_markdown: msg.content_markdown, edited_at: Number(msg.edited_at) }
+             : e,
+         );
+         break;
        case "guestbook:deleted":
-	 entries = entries.filter((e) => e.id !== Number(msg.id));
-	 break;
+         entries = entries.filter((e) => e.id !== Number(msg.id));
+         break;
        case "guestbook:voted":
          entries = entries.map((e) => (e.id === Number(msg.id) ? { ...e, votes: Number(msg.votes) } : e));
          break;
@@ -107,6 +110,11 @@
          break;
      }
    };
+ };
+
+ onMount(() => {
+   blog.check();
+   connect();
  });
 
  $effect(() => {
@@ -117,6 +125,7 @@
  });
 
  onDestroy(() => {
+   clearTimeout(reconnect_timer);
    ws?.close();
  });
 
