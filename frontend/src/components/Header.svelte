@@ -59,7 +59,7 @@
  }
 
  .me-ascii {
-   @apply whitespace-pre-wrap font-mono xl:text-sm text-xs text-(--color-accent);
+   @apply whitespace-pre-wrap font-mono xl:text-sm text-xs text-(--color-accent) transition-[color,text-shadow] duration-300 ease-in-out;
  }
 
  :global(html.dark) .me-ascii {

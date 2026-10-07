@@ -2,6 +2,72 @@
 @plugin '@tailwindcss/forms';
 @plugin '@tailwindcss/typography';
 
+@property --color-text {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-subtext {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-subtext-alt {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-link {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-bg {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-primary {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-secondary {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-accent {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-surface {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-surface-secondary {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-overlay {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-error {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+@property --color-confirm {
+    syntax: "<color>";
+    inherits: true;
+    initial-value: rgb(0 0 0);
+}
+
 @custom-variant dark (&:where(.dark, .dark *));
 @theme {
     --breakpoint-xs: 25rem;
@@ -78,6 +144,20 @@
     --color-overlay: var(--latte-overlay0);
     --color-error: var(--latte-red);
     --color-confirm: var(--latte-green);
+
+    transition:
+        --color-text 0.3s ease-in-out,
+        --color-subtext 0.3s ease-in-out,
+        --color-subtext-alt 0.3s ease-in-out,
+        --color-link 0.3s ease-in-out,
+        --color-bg 0.3s ease-in-out,
+        --color-primary 0.3s ease-in-out,
+        --color-secondary 0.3s ease-in-out,
+        --color-surface 0.3s ease-in-out,
+        --color-surface-secondary 0.3s ease-in-out,
+        --color-overlay 0.3s ease-in-out,
+        --color-error 0.3s ease-in-out,
+        --color-confirm 0.3s ease-in-out;
 }
 
 .dark {

@@ -11,7 +11,7 @@
    const cs = getComputedStyle(document.documentElement);
    const c = cs.getPropertyValue("--color-accent").trim();
    if (c) color = c;
-   alpha = document.documentElement.classList.contains("dark") ? 0.28 : 0.14;
+   alpha = document.documentElement.classList.contains("dark") ? 0.28 : 0.45;
  });
 
  onMount(() => {
@@ -59,7 +59,7 @@
          const d = Math.sin((fx - fy) * 11.0 - time * 1.6);
          const v = (a + b + c + d) / 8 + 0.5;
          if (v > 0.94) {
-           ctx.globalAlpha = alpha * 2;
+           ctx.globalAlpha = Math.min(alpha * 2, 1);
            ctx.fillText("*", x * CELL, y * CELL);
            ctx.globalAlpha = alpha;
          } else {
