@@ -49,6 +49,10 @@ get() ->
   ],
 
   [
+   blog_cache:middleware([
+     {<<"/_app/immutable/">>, <<"public, max-age=31536000, immutable">>},
+     {<<"/badges/">>, <<"public, max-age=604800">>}
+   ]),
    blog_access_log:middleware(),
    errm_http_compress:compress(CompressionConfig),
    CORS,
