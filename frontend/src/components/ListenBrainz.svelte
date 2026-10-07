@@ -38,7 +38,12 @@
         {@const cover_art_url = listenbrainz.get_cover_art_url(listen)}
         {#if cover_art_url}
           {#if listen.track_metadata.additional_info?.release_mbid}
-            <a href="https://musicbrainz.org/release/{listen.track_metadata.additional_info?.release_mbid}" target="_blank" rel="noopener noreferrer">
+            <a
+              class="lb-cover-link"
+              href="https://musicbrainz.org/release/{listen.track_metadata.additional_info.release_mbid}"
+              target="_blank"
+              rel="noopener noreferrer"
+            >
               <img src={cover_art_url} alt="Album art" class="lb-cover-art" loading="lazy" />
             </a>
           {:else}
@@ -88,7 +93,7 @@
       </div>
     </div>
     {#if recent.length}
-           <ul class="lb-recent">
+      <ul class="lb-recent">
         {#each recent as item}
           {@const art = listenbrainz.get_cover_art_url(item)}
           <li class="lb-recent-item">
@@ -186,6 +191,10 @@
    @apply w-32 h-32 object-cover rounded-sm shrink-0 bg-(--color-secondary);
  }
 
+ .lb-cover-link {
+   @apply shrink-0;
+ }
+ 
  .lb-placeholder {
    @apply flex items-center justify-center text-lg bg-(--color-surface-secondary);
  }
