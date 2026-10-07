@@ -29,9 +29,11 @@ interface ApiResponse {
 export const create_listenbrainz = (
   username: string,
   refresh_interval: number = 15000,
+  recent_count: number = 5,
 ) => {
   let current_listen = $state<Listen | null>(null);
   let last_listen = $state<Listen | null>(null);
+  let recent_listens = $state<Listen[]>([]);
   let is_loading = $state<boolean>(true);
   let error = $state<string | null>(null);
   let interval_id = $state<ReturnType<typeof setInterval> | undefined>(
@@ -55,7 +57,7 @@ export const create_listenbrainz = (
           { signal: AbortSignal.timeout(8000) },
         ),
         fetch(
-          `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=1`,
+          `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=${recent_count + 1}`,
           { signal: AbortSignal.timeout(8000) },
         ),
       ]);
@@ -68,7 +70,9 @@ export const create_listenbrainz = (
 
       if (recent_res.ok) {
         const recent: ApiResponse = await recent_res.json();
-        last_listen = recent.payload.listens?.[0] ?? last_listen;
+        const listens = recent.payload.listens ?? [];
+        recent_listens = listens;
+        last_listen = listens[0] ?? last_listen;
       }
     } catch (e) {
       if (!current_listen && !last_listen) {
@@ -102,6 +106,9 @@ export const create_listenbrainz = (
     },
     get last_listen() {
       return last_listen;
+    },
+    get recent_listens() {
+      return recent_listens;
     },
     get is_loading() {
       return is_loading;

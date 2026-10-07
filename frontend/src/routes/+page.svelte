@@ -93,7 +93,7 @@
     <Marquee badges={friends} duration={5} />
     <Marquee badges={random} duration={10} />
   </Cell>
-  <Cell title="listening">
-    <ListenBrainz refresh_interval={7500} />
+  <Cell title="ListenBrainz">
+    <ListenBrainz refresh_interval={8000} />
   </Cell>
 </main>
