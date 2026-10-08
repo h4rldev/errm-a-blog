@@ -8,6 +8,12 @@ export interface TrackMetadata {
     track_mbid?: string;
     recording_mbid?: string;
     cover_art_url?: string;
+    submission_client?: string;
+  };
+  mbid_mapping?: {
+    recording_mbid?: string;
+    release_mbid?: string;
+    artist_mbids?: string[];
   };
 }
 
@@ -25,6 +31,31 @@ interface ApiResponse {
     playing_now?: boolean;
   };
 }
+
+const listen_key = (listen: Listen): string => {
+  const md = listen.track_metadata;
+  return (
+    md.mbid_mapping?.recording_mbid ??
+    md.additional_info?.recording_mbid ??
+    `${md.artist_name} - ${md.track_name}`
+  );
+};
+
+const submission_client = (listen: Listen): string =>
+  listen.track_metadata.additional_info?.submission_client ?? "";
+
+const dedupe_listens = (listens: Listen[]): Listen[] => {
+  const out: Listen[] = [];
+  for (const listen of listens) {
+    const key = listen_key(listen);
+    const client = submission_client(listen);
+    const duplicate = out.some(
+      (kept) => listen_key(kept) === key && submission_client(kept) !== client,
+    );
+    if (!duplicate) out.push(listen);
+  }
+  return out;
+};
 
 export const create_listenbrainz = (
   username: string,
@@ -57,7 +88,7 @@ export const create_listenbrainz = (
           { signal: AbortSignal.timeout(8000) },
         ),
         fetch(
-          `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=${recent_count + 1}`,
+          `https://api.listenbrainz.org/1/user/${encodeURIComponent(username)}/listens?count=${recent_count * 2 + 1}`,
           { signal: AbortSignal.timeout(8000) },
         ),
       ]);
@@ -70,7 +101,7 @@ export const create_listenbrainz = (
 
       if (recent_res.ok) {
         const recent: ApiResponse = await recent_res.json();
-        const listens = recent.payload.listens ?? [];
+        const listens = dedupe_listens(recent.payload.listens ?? []);
         recent_listens = listens;
         last_listen = listens[0] ?? last_listen;
       }
