@@ -12,7 +12,9 @@ ARG TARGETARCH
 ENV ERL_ROOT=/usr/lib/erlang
 
 COPY --from=cmarkbuild /cmark /cmark
-ENV C_INCLUDE_PATH=/cmark/include LIBRARY_PATH=/cmark/lib
+ENV PKG_CONFIG_PATH=/cmark/lib/pkgconfig \
+    C_INCLUDE_PATH=/cmark/include \
+    LIBRARY_PATH=/cmark/lib
 
 RUN --mount=type=secret,id=gh_token,env=GITHUB_TOKEN,required=false set -eu; \
   case "$TARGETARCH" in arm64) A=aarch64 ;; *) A=x86_64 ;; esac; \
