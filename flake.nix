@@ -35,6 +35,10 @@
       url = "git+https://codeberg.org/h4rl/errm-ARGON";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    errm-cmark-gfm = {
+      url = "git+https://codeberg.org/h4rl/errm-cmark-gfm";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -48,6 +52,7 @@
     errm-sqlite,
     errm-ws,
     errm-argon,
+    errm-cmark-gfm,
   }: let
     system = "x86_64-linux";
     pkgs = import nixpkgs {inherit system;};
@@ -61,6 +66,7 @@
       errm-sqlite.packages.${system}.errm-sqlite-debug
       errm-ws.packages.${system}.errm-ws-debug
       errm-argon.packages.${system}.errm-argon-debug
+      errm-cmark-gfm.packages.${system}.errm-cmark-gfm-debug
     ];
 
     errm-prod = beamPackages.buildRebar3 {
@@ -78,6 +84,7 @@
         errm-sqlite.packages.${system}.default
         errm-ws.packages.${system}.default
         errm-argon.packages.${system}.default
+        errm-cmark-gfm.packages.${system}.default
       ];
 
       nativeBuildInputs = with pkgs; [
@@ -88,6 +95,7 @@
         brotli
         file
         sqlite
+        cmark-gfm
       ];
 
       env = {
@@ -113,6 +121,7 @@
         errm-jwt.packages.${system}.errm-jwt-debug
         errm-sqlite.packages.${system}.errm-sqlite-debug
         errm-argon.packages.${system}.errm-argon-debug
+        errm-cmark-gfm.packages.${system}.errm-cmark-gfm-debug
       ];
 
       nativeBuildInputs = with pkgs; [
@@ -123,6 +132,7 @@
         brotli
         file
         sqlite
+        cmark-gfm
       ];
 
       env = {
@@ -152,6 +162,7 @@
           pkgs.sqlite
           pkgs.pkg-config
           pkgs.libargon2
+          pkgs.cmark-gfm
 
           pkgs.deno
           pkgs.biome

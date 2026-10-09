@@ -13,7 +13,8 @@
         errm_sqlite,
         errm_env,
         errm_ws,
-        errm_argon
+        errm_argon,
+        errm_cmark_gfm
     ]},
     {env, []},
     {modules, []},

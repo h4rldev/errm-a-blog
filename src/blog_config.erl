@@ -8,7 +8,10 @@
   access_log_file :: string(),
   internal_log_level :: string(),
   db_path :: string(),
-  server_name :: string()
+  server_name :: string(),
+  server_url :: string(),
+  feed_title :: string(),
+  feed_description :: string()
 }).
 
 
@@ -20,7 +23,10 @@ load() ->
     access_log_file = "",
     internal_log_level = "debug",
     db_path = "blog.db",
-    server_name = "errm-a-blog"
+    server_name = "errm-a-blog",
+    server_url = "https://h4rl.dev",
+    feed_title = "h4rl.dev",
+    feed_description = "h4rl.dev - h4rl's little corner of the internet!"
   },
 
   Config = case file:read_file("errm-config.json") of
@@ -45,15 +51,21 @@ load() ->
           InternalLogLevel = maps:get(<<"internal_log_level">>, Decoded, Defaults#config.internal_log_level),
           DbPath = maps:get(<<"db_path">>, Decoded, Defaults#config.db_path),
           ServerName = maps:get(<<"server_name">>, Decoded, Defaults#config.server_name),
+          ServerUrl = maps:get(<<"server_url">>, Decoded, Defaults#config.server_url),
+          FeedTitle = maps:get(<<"feed_title">>, Decoded, Defaults#config.feed_title),
+          FeedDescription = maps:get(<<"feed_description">>, Decoded, Defaults#config.feed_description),
 
            #config{
-            ip_address=json_to_string(Ip),
-            port=PortInt,
-            log_access=LogAccessBool,
-            access_log_file=json_to_string(AccessLogFile),
-            internal_log_level=json_to_string(InternalLogLevel),
-            db_path=json_to_string(DbPath),
-            server_name=json_to_string(ServerName)
+            ip_address = json_to_string(Ip),
+            port = PortInt,
+            log_access = LogAccessBool,
+            access_log_file = json_to_string(AccessLogFile),
+            internal_log_level = json_to_string(InternalLogLevel),
+            db_path = json_to_string(DbPath),
+            server_name = json_to_string(ServerName),
+            server_url = json_to_string(ServerUrl),
+            feed_title = json_to_string(FeedTitle),
+            feed_description = json_to_string(FeedDescription)
           };
         {error, Reason} ->
           logger:warning("Failed to decode config file: ~p, using defaults", [Reason]),
@@ -92,6 +104,9 @@ get(Key) ->
     internal_log_level -> Config#config.internal_log_level;
     db_path -> Config#config.db_path;
     server_name -> Config#config.server_name;
+    server_url -> Config#config.server_url;
+    feed_title -> Config#config.feed_title;
+    feed_description -> Config#config.feed_description;
     _ -> undefined
   end.
 

@@ -12,6 +12,7 @@ get() ->
     {put, ["api", "post", ":id"], fun posts_api:update_post/1},
     {delete, ["api", "post", ":id"], fun posts_api:delete_post/1},
 
+    {get, ["blog", "feed.xml"], fun feed_api:feed/1},
     {get, ["api", "admin", "stats"], fun admin_api:get_stats/1},
     {get, ["api", "admin", "register_token"], fun admin_api:get_register_token/1},
     {get, ["api", "admin", "users"], fun admin_api:get_users/1},

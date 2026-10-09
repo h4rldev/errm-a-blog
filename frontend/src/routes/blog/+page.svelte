@@ -157,6 +157,16 @@
           {/if}
     {/if}
   </div>
+  <Cell title="RSS">
+    <p>
+      You can follow this blog through <Link href="/blog/feed.xml" rel="external" aria_label="RSS feed">the RSS feed</Link>.
+    </p>
+    <p class="mt-2">
+      Some readers open articles in a web view that can't run JavaScript, which shows a blank page.
+      Switch the reader to <strong>reading mode</strong> (sometimes called "feed content") instead,
+      the full articles are embedded in the feed itself.
+    </p>
+  </Cell>
 </main>
 
 <style>
@@ -229,7 +239,6 @@
    @apply hover:cursor-pointer bg-(--color-error) text-(--color-bg) font-bold py-1 px-2 active:bg-(--color-secondary) active:text-(--color-text) focus:outline-none transition-colors duration-200 ease-in-out border-2 border-(--color-text) active:border-(--color-overlay);
  }
 
- 
  .actions {
    @apply flex flex-row w-full gap-4 justify-center;
  }

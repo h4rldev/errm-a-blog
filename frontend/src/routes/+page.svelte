@@ -48,7 +48,7 @@
  ];
 </script>
 
-<Meta title="Home" path="/" />
+<Meta path="/" />
 <main>
   <Cell title="about">
     <Heading level="1">

@@ -20,6 +20,26 @@
         "url": "https://codeberg.org/h4rl/errm-ARGON"
       }
     },
+    "errm-cmark-gfm": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1791525085,
+        "narHash": "sha256-KB4O+VTglp8Nv/Y1+EuY1xsDVYEx7Vtp82wdy+lP1WM=",
+        "ref": "refs/heads/main",
+        "rev": "1b4adaf034dae3bb07e0bb5c713c8db576a1f462",
+        "revCount": 1,
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-cmark-gfm"
+      },
+      "original": {
+        "type": "git",
+        "url": "https://codeberg.org/h4rl/errm-cmark-gfm"
+      }
+    },
     "errm-env": {
       "inputs": {
         "nixpkgs": [
@@ -249,6 +269,7 @@
     "root": {
       "inputs": {
         "errm-argon": "errm-argon",
+        "errm-cmark-gfm": "errm-cmark-gfm",
         "errm-env": "errm-env",
         "errm-http": "errm-http",
         "errm-json": "errm-json",
