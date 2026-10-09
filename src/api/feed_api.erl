@@ -42,18 +42,31 @@ item(Row, Site) ->
    xml_tag("link", Link),
    [<<"<guid isPermaLink=\"true\">">>, esc(Link), <<"</guid>\n">>],
    [<<"<pubDate>">>, pub_date(maps:get("posted_at", Row, undefined)), <<"</pubDate>\n">>],
-   xml_tag("description", summary(Row)),
+   xml_tag("description", description(Row)),
    xml_tag("content:encoded", content(Row)),
    [<<"<author>">>, esc(maps:get("username", Row, <<>>)), <<"</author>\n">>],
    [xml_tag("category", Tag) || Tag <- tags(Row)],
    <<"</item>\n">>].
 
-summary(Row) ->
-  to_binary(maps:get("summary", Row, <<>>)).
+description(Row) ->
+  markdown_to_html(tidbit(raw_summary(Row))).
+
+raw_summary(Row) ->
+  Summary = to_binary(maps:get("summary", Row, <<>>)),
+  case string:trim(Summary) of
+    <<>> -> to_binary(maps:get("content_markdown", Row, <<>>));
+    _ -> Summary
+  end.
+
+tidbit(Text) ->
+  case string:length(Text) > 200 of
+    true -> <<(string:slice(Text, 0, 200))/binary, "...">>;
+    false -> Text
+  end.
 
 content(Row) ->
   case to_binary(maps:get("content_markdown", Row, <<>>)) of
-    <<>> -> summary(Row);
+    <<>> -> to_binary(maps:get("summary", Row, <<>>));
     Markdown -> markdown_to_html(Markdown)
   end.
 
