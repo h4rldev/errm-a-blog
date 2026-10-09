@@ -1,8 +1,18 @@
 # syntax=docker/dockerfile:1
 
+FROM alpine:3.22 AS cmarkbuild
+RUN apk add --no-cache cmake make gcc g++ musl-dev git \
+ && git clone --depth 1 --branch 0.29.0.gfm.13 https://github.com/github/cmark-gfm.git /cmark-src \
+ && cmake -S /cmark-src -B /cmark-src/build -DCMAKE_BUILD_TYPE=Release -DCMARK_TESTS=OFF -DCMAKE_INSTALL_PREFIX=/cmark \
+ && cmake --build /cmark-src/build -j"$(nproc)" \
+ && cmake --install /cmark-src/build
+
 FROM alpine:3.22 AS erlbuild-base
 ARG TARGETARCH
 ENV ERL_ROOT=/usr/lib/erlang
+
+COPY --from=cmarkbuild /cmark /cmark
+ENV C_INCLUDE_PATH=/cmark/include LIBRARY_PATH=/cmark/lib
 
 RUN --mount=type=secret,id=gh_token,env=GITHUB_TOKEN,required=false set -eu; \
   case "$TARGETARCH" in arm64) A=aarch64 ;; *) A=x86_64 ;; esac; \
@@ -45,6 +55,10 @@ RUN apk add --no-cache \
       erlang28 sqlite-libs argon2-libs brotli ncurses-libs file \
       ca-certificates tini \
  && adduser -D -u 1000 -s /bin/sh app
+
+COPY --from=cmarkbuild /cmark/lib/libcmark-gfm.so.0.29.0.gfm.13 /usr/lib/
+COPY --from=cmarkbuild /cmark/lib/libcmark-gfm-extensions.so.0.29.0.gfm.13 /usr/lib/
+
 WORKDIR /app
 COPY --from=prod /build/_build/prod/bin/errm_a_blog ./errm_a_blog
 COPY --from=migbuild /build/_build/migrations/bin/migrator ./migrator
