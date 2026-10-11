@@ -3,13 +3,12 @@
 
 sanitize(Text, Scope) ->
   {Keywords, Patterns} = blocked_patterns(Scope),
-  mask_keywords(apply_patterns(Text, Patterns), Keywords).
+  mask_keywords(apply_patterns(iolist_to_binary(Text), Patterns), Keywords).
 
 apply_patterns(Acc, []) -> Acc;
 apply_patterns(Acc, [Pattern | Rest]) ->
   try re:replace(Acc, Pattern, <<"####">>, [global, caseless, unicode, ucp]) of
-    Masked when is_binary(Masked) -> apply_patterns(Masked, Rest);
-    Masked when is_list(Masked) -> apply_patterns(iolist_to_binary(Masked), Rest)
+    Masked -> apply_patterns(Masked, Rest)
   catch _:_ ->
     logger:error("Invalid blocked pattern ~p", [Pattern]),
     apply_patterns(Acc, Rest)

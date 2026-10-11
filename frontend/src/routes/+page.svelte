@@ -25,6 +25,7 @@
    { src: "/badges/h4rl.png", href: "https://h4rl.dev", alt: "h4rl.dev" },
    { src: "/badges/friends/hrtowii.png", href: "https://hrtowii.nekoweb.org", alt: "hrtowii.nekoweb.org" },
    { src: "/badges/friends/at0m.gif", href: "https://at0m.firebomb.ing", alt: "at0m.firebomb.ing" },
+   { src: "/badges/friends/firebombing.png", href: "https://firebomb.ing", alt: "firebomb.ing" },
    { src: "https://dane.gg/assets/img/buttons/88x31/button.gif", href: "https://dane.gg", alt: "dane.gg" },
    { src: "/badges/friends/jesx.gif", href: "https://anemoia.moe/", alt: "anemoia.moe" },
    { src: "/badges/friends/doloro.avif", href: "https://doloro.co.uk", alt: "doloro.co.uk" },

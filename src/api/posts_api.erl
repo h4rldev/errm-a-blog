@@ -98,12 +98,12 @@ deduplicate_tags(Tags) ->
 deduplicate_tags([], Acc) ->
   Acc;
 deduplicate_tags([Tag | Rest], Acc) ->
-  Lower = string:to_lower(binary_to_list(Tag)),
+  Lower = string:lowercase(Tag),
   case maps:is_key(Lower, Acc) of
     true ->
       deduplicate_tags(Rest, Acc);
     false ->
-      deduplicate_tags(Rest, Acc#{list_to_binary(Lower) => Tag})
+      deduplicate_tags(Rest, Acc#{Lower => Tag})
   end.
 
 handle_get_posts(Amount) ->

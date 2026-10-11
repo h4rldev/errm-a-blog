@@ -114,7 +114,7 @@ insert_new_user(Username, Password, Role) ->
 
 insert_user(Db, Uuid, Username, Hash, Role) ->
   Sql = "INSERT INTO users (uuid, username, password_hash, role) VALUES ($1, $2, $3, $4)",
-  case errm_sqlite:query(Db, Sql, [list_to_binary(Uuid), list_to_binary(Username), Hash, Role]) of
+  case errm_sqlite:query(Db, Sql, [Uuid, Username, Hash, Role]) of
     {ok, _} ->
       Message = io_lib:format("Account ~s (~s) created successfully!", [Username, Uuid]),
       MessageBin = iolist_to_binary(Message),
@@ -169,16 +169,15 @@ handle_login(Req, Username, Password) ->
 
 fetch_user_hash(Req, Db, Username, Password) ->
   Sql = "SELECT uuid, password_hash, role, auth_version FROM users WHERE username = ? LIMIT 1",
-  case errm_sqlite:query(Db, Sql, [list_to_binary(Username)]) of
+  case errm_sqlite:query(Db, Sql, [Username]) of
     {ok, []} ->
       response_utils:error(400, "User not found");
     {ok, [Row]} ->
       UserId = maps:get("uuid", Row),
       StoredHash = maps:get("password_hash", Row),
-      StoredHash1 = list_to_binary(io_lib:format("~s", [StoredHash])),
       Role = maps:get("role", Row),
       AuthVersion = maps:get("auth_version", Row),
-      case errm_argon:verify(Password, StoredHash1) of
+      case errm_argon:verify(Password, StoredHash) of
         true ->
           issue_session_token(Req, UserId, Role, AuthVersion);
         false ->
